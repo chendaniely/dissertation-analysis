@@ -1,0 +1,78 @@
+---
+title: "Self-Assessment Descriptives"
+output: 
+  html_document: 
+    toc: yes
+    number_sections: yes
+---
+
+```{r, message=FALSE}
+library(here)
+library(readr)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(ggplot2)
+library(fs)
+library(stringi)
+
+
+plot_question_bar <- function(dat) {
+  ggplot(data = dat,
+         aes(x = stringr::str_wrap(response, 30),
+             y = n)
+  ) +
+    geom_bar(stat="identity") +
+    xlab("") +
+    ylab("Count") +
+    #labels(line_break(dat$response)) +
+    coord_flip() +
+    ggtitle(dat$question_text) +
+    theme(
+      plot.title.position = "plot"
+    )
+}
+
+
+persona <- readr::read_tsv(here("./data/original/surveys/02-self_assessment_with_questions.tsv"))
+
+counts <- persona %>%
+  dplyr::group_by(qbase, question_text) %>%
+  dplyr::count(response) %>%
+  tidyr::drop_na()
+```
+
+```{r}
+# plot_question_bar(dplyr::filter(counts, qbase==unique(counts$qbase)[[2]]))
+```
+
+# Question Bar Graphs
+
+```{r, fig.width=8, fig.height=5}
+fs::dir_create(here("./output", "survey", "01-self_assessment"), recurse = TRUE)
+
+for (q in unique(counts$qbase)) {
+  print(q)
+  g <- plot_question_bar(dplyr::filter(counts, qbase==q))
+  pth <- here("./output", "survey", "01-self_assessment", glue::glue("{q}.png"))
+  print(pth)
+  print(g)
+  ggsave(filename = pth, plot = g, width = 8, height = 5, units="in")
+}
+```
+
+# Free Response
+
+```{r}
+persona %>%
+  dplyr::filter(qbase == "Q7.3") %>%
+  dplyr::select(response) %>%
+  tidyr::drop_na()
+```
+
+```{r}
+persona %>%
+  dplyr::filter(qbase == "Q7.4") %>%
+  dplyr::select(response) %>%
+  tidyr::drop_na()
+```
