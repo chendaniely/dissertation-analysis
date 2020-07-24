@@ -1,0 +1,36 @@
+---
+title: "Crosstab"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+library(readr)
+library(tidyr)
+library(here)
+```
+
+
+```{r}
+persona <- readr::read_tsv(here("./data/original/surveys/02-self_assessment_with_questions.tsv"))
+```
+
+```{r}
+xtab <- persona %>%
+  dplyr::select(-qid) %>%
+  dplyr::filter(qbase == "Q3.6" | qbase == "Q3.2") %>%
+  dplyr::select(id, question_part, response) %>%
+  tidyr::pivot_wider(names_from = "question_part", values_from = "response") %>%
+  tidyr::pivot_longer(starts_with("Q3.2_"))
+```
+
+```{r}
+xtab
+```
+
+
+```{r}
+table(xtab$Q3.6, xtab$value)
+```
+
