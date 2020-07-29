@@ -19,7 +19,7 @@ library(stringi)
 
 plot_question_bar <- function(dat) {
   ggplot(data = dat,
-         aes(x = stringr::str_wrap(response, 30),
+         aes(x = stringr::str_wrap(response, 40),
              y = n)
   ) +
     geom_bar(stat="identity") +
@@ -27,7 +27,7 @@ plot_question_bar <- function(dat) {
     ylab("Count") +
     #labels(line_break(dat$response)) +
     coord_flip() +
-    ggtitle(dat$question_text) +
+    ggtitle(stringr::str_wrap(dat$question_text, 100)) +
     theme(
       plot.title.position = "plot"
     )
@@ -43,7 +43,7 @@ counts <- persona %>%
 ```
 
 ```{r}
-# plot_question_bar(dplyr::filter(counts, qbase==unique(counts$qbase)[[2]]))
+# plot_question_bar(dplyr::filter(counts, qbase==unique(counts$qbase)[[11]]))
 ```
 
 # Question Bar Graphs
