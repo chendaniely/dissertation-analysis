@@ -67,12 +67,14 @@ for (q in unique(counts$qbase)) {
 persona %>%
   dplyr::filter(qbase == "Q7.3") %>%
   dplyr::select(response) %>%
-  tidyr::drop_na()
+  tidyr::drop_na() %>%
+  dplyr::pull(1)
 ```
 
 ```{r}
 persona %>%
   dplyr::filter(qbase == "Q7.4") %>%
   dplyr::select(response) %>%
-  tidyr::drop_na()
+  tidyr::drop_na() %>%
+  dplyr::pull(1)
 ```
