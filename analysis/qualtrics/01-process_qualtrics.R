@@ -15,8 +15,8 @@ remove_identifiers <- function(dat) {
     # drop test data
     dplyr::filter(StartDate >= "2020-07-23")
   
-  # check for no duplicate IDs
-  stopifnot(all(!duplicated(dat$Q2.2)))
+  # check for no duplicate IDs, excluding NAs
+  stopifnot(all(!duplicated(na.omit(dat$Q2.2))))
   
   # create unique integer IDs
   dat <- dat %>%
