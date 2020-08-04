@@ -29,6 +29,9 @@ remove_identifiers <- function(dat) {
 }
 
 # https://github.com/ropensci/qualtRics
+# QUALTRICS_BASE_URL="virginiatech.ca1.qualtrics.com"
+# QUALTRICS_API_KEY in qualtrics > account settings > qualtics IDs > API
+# usethis::edit_r_environ()
 readRenviron("~/.Renviron")
 
 surveys <- all_surveys()
