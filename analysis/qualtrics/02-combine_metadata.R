@@ -4,20 +4,14 @@ library(here)
 library(tidyr)
 library(tibble)
 library(rvest)
+library(jsonlite)
 
-
-strip_html <- function(s) {
-  if (stringr::str_detect(s, "<.*?>")) {
-    return(rvest::html_text(xml2::read_html(s)))
-  } else {
-    return(s)
-  }
-}
+source(here("R/strip_html.R"))
 
 surveys <- all_surveys()
 self_assessment_id <-  surveys$id[stringr::str_detect(surveys$name, "student_survey")]
 
-#meta_self_assessment <- qualtRics::metadata(surveyID = self_assessment_id, get = list(questions = TRUE))
+meta_self_assessment <- qualtRics::metadata(surveyID = self_assessment_id, get = list(questions = TRUE))
 questions_self_assessment <- qualtRics::survey_questions(self_assessment_id)
 survey_self_assessment <- readr::read_tsv(here("./data/original/surveys/01-self_assessment_persona.tsv"))
 
@@ -40,5 +34,9 @@ survey_self_assessment_w_q <- survey_self_assessment %>%
   dplyr::full_join(questions_self_assessment, by = c("qbase" = "qname"), suffix=c("_part", "_text"))
 
 
+jsonlite::write_json(meta_self_assessment,
+                     here("./data/original/surveys/02-self_assessment_metadata.json"))
+readr::write_tsv(questions_self_assessment,
+                 here("./data/original/surveys/02-self_assessment_questions_meta.tsv"))
 readr::write_tsv(survey_self_assessment_w_q,
                  here("./data/original/surveys/02-self_assessment_with_questions.tsv"))
