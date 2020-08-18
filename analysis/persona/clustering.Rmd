@@ -85,8 +85,9 @@ https://uc-r.github.io/hc_clustering
 dist <- dist(numeric_data, method = "euclidean")
 ```
 
+## Finding the clustering method
 
-## Complete
+### Complete
 
 Computes pairwise similarities, and the "most" (i.e., maximum) similar ones are grouped together
 
@@ -97,12 +98,37 @@ hc_complete <- hclust(dist, method = "complete")
 plot(hc_complete, cex = 0.6, hang = -1)
 ```
 
-## Ward's
+### Ward's
 
-Minimizes the total **within cluster** variance
+Minimizes the total **within cluster** variance.
+
+From the docs:
+
+> Two different algorithms are found in the literature for Ward clustering. The one used by option "ward.D" (equivalent to the only Ward option "ward" in R versions <= 3.0.3) does not implement Ward's (1963) clustering criterion, whereas option "ward.D2" implements that criterion (Murtagh and Legendre 2014). With the latter, the dissimilarities are squared before cluster updating. Note that agnes(*, method="ward") corresponds to hclust(*, "ward.D2").
 
 ```{r}
-hc_ward <- hclust(dist, method = "ward.D")
+hc_ward <- hclust(dist, method = "ward.D2")
 # Plot the result
 plot(hc_ward, cex = 0.6, hang = -1)
 ```
+
+
+### Comparing dendograms
+
+Calculate agglomerative coefficient (closer to 1 mean stronger clustering structure)
+
+```{r}
+m <- c("average", "single", "complete", "ward")
+names(m) <- c( "average", "single", "complete", "ward")
+
+purrr::map_dbl(m, ~ cluster::agnes(numeric_data, method = .)$ac)
+```
+
+Ward's gives us the best clustering structure
+
+```{r}
+hc_agnes_wards <- agnes(numeric_data, method = "ward")
+cluster::pltree(hc_agnes_wards, cex = 0.6, hang = -1, main = "Dendrogram of agnes")
+```
+
+## Cutting the tree to create clusters
