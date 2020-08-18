@@ -147,6 +147,41 @@ ggsave(filename = here("./output", "persona", "group_descriptives_5", "likert.pn
        units = "in")
 ```
 
+## Heatmap by proportion in group
+
+```{r}
+likert_q_count5_prop <- likert_questions5 %>%
+  dplyr::group_by(group5, text) %>%
+  dplyr::count(response) %>%
+  dplyr::filter(!is.na(group5)) %>%
+  dplyr::group_by(group5) %>%
+  dplyr::mutate(rel_freq = n / sum(n))
+```
+
+```{r}
+g <- ggplot(likert_q_count5_prop,
+       aes(x = x_factor,
+           y = stringr::str_wrap(text, 50))) +
+  geom_tile(aes(fill = rel_freq)) +
+  geom_text(aes(label = round(rel_freq, 1))) +
+  facet_wrap(~ group5) +
+  scale_fill_viridis() +
+  xlab("") +
+  ylab("") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = -90, hjust = 0, vjust = 1)) +
+  NULL
+print(g)
+```
+
+```{r}
+ggsave(filename = here("./output", "persona", "group_descriptives_5", "likert_prop.png"),
+       plot = g,
+       width = 13,
+       height = 8,
+       units = "in")
+```
+
 # Free Response
 
 - Q7.3: Please share what you most hope to learn from participating in this workshop and/or workshop series. 
