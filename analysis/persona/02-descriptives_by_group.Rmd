@@ -17,6 +17,8 @@ library(dplyr)
 library(tidyr)
 library(viridis)
 library(RColorBrewer)
+library(knitr)
+library(kableExtra)
 
 plot_question_bar <- function(dat) {
   ggplot(data = dat,
@@ -201,10 +203,10 @@ reponse_table <- persona %>%
 reponse_table %>%
   knitr::kable() %>%
   kableExtra::kable_styling(bootstrap_options = c("striped", "hover")) %>%
-  row_spec(which(reponse_table$group5 == 1), color = "white", background = .GlobalEnv$COLORS[1]) %>%
-  row_spec(which(reponse_table$group5 == 2), color = "white", background = .GlobalEnv$COLORS[2]) %>%
-  row_spec(which(reponse_table$group5 == 3), color = "white", background = .GlobalEnv$COLORS[3]) %>%
-  row_spec(which(reponse_table$group5 == 4), color = "white", background = .GlobalEnv$COLORS[4]) %>%
-  row_spec(which(reponse_table$group5 == 5), color = "white", background = .GlobalEnv$COLORS[5])
+  kableExtra::row_spec(which(reponse_table$group5 == 1), color = "white", background = .GlobalEnv$COLORS[1]) %>%
+  kableExtra::row_spec(which(reponse_table$group5 == 2), color = "white", background = .GlobalEnv$COLORS[2]) %>%
+  kableExtra::row_spec(which(reponse_table$group5 == 3), color = "white", background = .GlobalEnv$COLORS[3]) %>%
+  kableExtra::row_spec(which(reponse_table$group5 == 4), color = "white", background = .GlobalEnv$COLORS[4]) %>%
+  kableExtra::row_spec(which(reponse_table$group5 == 5), color = "white", background = .GlobalEnv$COLORS[5])
   
 ```
