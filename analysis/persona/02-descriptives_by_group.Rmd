@@ -146,3 +146,30 @@ ggsave(filename = here("./output", "persona", "group_descriptives_5", "likert.pn
        height = 8,
        units = "in")
 ```
+
+# Free Response
+
+- Q7.3: Please share what you most hope to learn from participating in this workshop and/or workshop series. 
+- Q7.4: What do you want to know or be able to do after this workshop (or series of sessions) that you don't know or can't do right now?
+
+## Paired responses by group
+
+
+```{r}
+reponse_table <- persona %>%
+  dplyr::filter(qbase == "Q7.3" | qbase == "Q7.4") %>%
+  dplyr::select(group5, id, qbase, response) %>%
+  tidyr::pivot_wider(names_from = qbase, values_from = response) %>%
+  dplyr::filter(! (is.na(Q7.3) & is.na(Q7.4))) %>%
+  dplyr::arrange(group5, id)
+
+reponse_table %>%
+  knitr::kable() %>%
+  kableExtra::kable_styling(bootstrap_options = c("striped", "hover")) %>%
+  row_spec(which(reponse_table$group5 == 1), color = "white", background = .GlobalEnv$COLORS[1]) %>%
+  row_spec(which(reponse_table$group5 == 2), color = "white", background = .GlobalEnv$COLORS[2]) %>%
+  row_spec(which(reponse_table$group5 == 3), color = "white", background = .GlobalEnv$COLORS[3]) %>%
+  row_spec(which(reponse_table$group5 == 4), color = "white", background = .GlobalEnv$COLORS[4]) %>%
+  row_spec(which(reponse_table$group5 == 5), color = "white", background = .GlobalEnv$COLORS[5])
+  
+```
