@@ -35,7 +35,12 @@ plot_question_bar <- function(dat) {
     ggtitle(stringr::str_wrap(dat$question_text, 80)) +
     theme_minimal() +
     theme(
-      plot.title.position = "plot"
+      plot.title.position = "plot",
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      panel.background = element_blank(),
+      axis.line = element_line(colour = "black")
+      
     )
 }
 
