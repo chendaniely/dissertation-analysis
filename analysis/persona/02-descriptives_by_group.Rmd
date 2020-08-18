@@ -29,7 +29,7 @@ plot_question_bar <- function(dat) {
     ylab("Count") +
     #labels(line_break(dat$response)) +
     coord_flip() +
-    ggtitle(stringr::str_wrap(dat$question_text, 100)) +
+    ggtitle(stringr::str_wrap(dat$question_text, 80)) +
     theme_minimal() +
     theme(
       plot.title.position = "plot"
