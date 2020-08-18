@@ -12,6 +12,7 @@ editor_options:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, fig.width = 8, fig.height = 5)
+options(width = 100)
 
 library(here)
 library(readr)
@@ -72,7 +73,6 @@ scale(numeric_data)[1:5, 1:6]
 
 ```{r}
 pca_persona <- prcomp(numeric_data)
-
 summary(pca_persona)
 ```
 
