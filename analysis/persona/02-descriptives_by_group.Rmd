@@ -16,6 +16,7 @@ library(ggplot2)
 library(dplyr)
 library(tidyr)
 library(viridis)
+library(RColorBrewer)
 
 plot_question_bar <- function(dat) {
   ggplot(data = dat,
@@ -27,6 +28,8 @@ plot_question_bar <- function(dat) {
              position = "dodge2") +
     xlab("") +
     ylab("Count") +
+    scale_fill_manual(name = "Cluster",
+                      values = .GlobalEnv$COLORS) +
     #labels(line_break(dat$response)) +
     coord_flip() +
     ggtitle(stringr::str_wrap(dat$question_text, 80)) +
@@ -51,6 +54,13 @@ counts <- persona %>%
 ```
 
 # Question Bar Graphs
+
+```{r}
+brewer.pal(8, "Dark2")
+display.brewer.pal(8, "Dark2")
+COLORS <- brewer.pal(8, "Dark2")[c(1:4, 6)]
+```
+
 
 ```{r}
 for (q in unique(counts$qbase)) {
