@@ -59,7 +59,7 @@ for (q in unique(counts$qbase)) {
   pth <- here("./output", "persona", "persona_group_5", glue::glue("{q}.png"))
   #print(pth)
   print(g)
-  #ggsave(filename = pth, plot = g, width = 8, height = 5, units = "in")
+  ggsave(filename = pth, plot = g, width = 8, height = 5, units = "in")
   #break
 }
 ```
@@ -122,9 +122,9 @@ print(g)
 ```
 
 ```{r}
-# ggsave(filename = here("./output", "survey", "01-self_assessment", "likert.png"),
-#        plot = g,
-#        width = 13,
-#        height = 8,
-#        units = "in")
+ggsave(filename = here("./output", "persona", "persona_group_5", "likert.png"),
+       plot = g,
+       width = 13,
+       height = 8,
+       units = "in")
 ```
