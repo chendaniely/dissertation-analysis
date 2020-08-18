@@ -1,12 +1,14 @@
 ---
 title: "Descriptives by Group"
-output: html_document
+output: 
+  html_document: 
+    toc: yes
 editor_options: 
   chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
 
 library(readr)
 library(here)
@@ -21,8 +23,8 @@ plot_question_bar <- function(dat) {
              y = n,
              fill=as.factor(group5))
   ) +
-    geom_bar(stat="identity",
-             position="dodge2") +
+    geom_bar(stat = "identity",
+             position = "dodge2") +
     xlab("") +
     ylab("Count") +
     #labels(line_break(dat$response)) +
