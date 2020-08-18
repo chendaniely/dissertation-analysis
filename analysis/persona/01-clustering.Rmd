@@ -34,24 +34,24 @@ wide <- persona %>%
   {.}
 
 # make sure the row names are the same as the IDs before dropping
-rownames(wide) <- wide$id
+wide <- tibble::column_to_rownames(wide, var = "id")
 stopifnot(all(rownames(wide) == wide$id))
 
-ids <- wide$id
-
-wide <- dplyr::select(wide, -id)
+rownames(wide)
 
 # should only have the text responses to convert to factors
 stopifnot(all(lapply(wide, class) == "character"))
 q3.1_unique <- length(wide$Q3.1 %>% unique())
 numeric_data <- purrr::map_df(wide, ~as.numeric(as.factor(.)))
 stopifnot(length(unique(numeric_data$Q3.1)) == q3.1_unique)
+
+rownames(numeric_data) <- rownames(wide)
 ```
 
 # The data
 
 ```{r}
-head(numeric_data)
+tail(numeric_data)
 ```
 
 The data are the numeric (factor) survey responses.
@@ -156,6 +156,7 @@ numeric_data <- numeric_data %>%
     group5 = sub_grp5,
     group6 = sub_grp6
   )
+rownames(numeric_data) <- rownames(wide)
 ```
 
 ```{r}
@@ -196,7 +197,7 @@ Will need to look at the results to see if they create meaningful personas
 
 ```{r, include=FALSE}
 group_data <- numeric_data %>%
-  dplyr::mutate(id = ids) %>%
+  tibble::rownames_to_column(var = "id") %>%
   dplyr::select(id, group5)
 
 stopifnot(nrow(numeric_data) == nrow(group_data))
@@ -204,6 +205,7 @@ stopifnot(nrow(numeric_data) == nrow(group_data))
 stopifnot(all(unique(group_data$id) %in% unique(persona$id)))
 
 persona5 <- persona %>%
+  dplyr::mutate(id = as.character(id)) %>%
   dplyr::left_join(group_data, by = c("id" = "id"))
 
 fs::dir_create(here("./data", "final", "persona"), recurse = TRUE)
