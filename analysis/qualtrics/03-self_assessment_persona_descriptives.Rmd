@@ -32,7 +32,7 @@ plot_question_bar <- function(dat) {
          aes(x = stringr::str_wrap(response, 60),
              y = n)
   ) +
-    geom_bar(stat="identity") +
+    geom_bar(stat = "identity") +
     xlab("") +
     ylab("Count") +
     #labels(line_break(dat$response)) +
