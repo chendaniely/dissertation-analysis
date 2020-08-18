@@ -4,9 +4,7 @@ library(dplyr)
 library(tidyr)
 
 
-persona <- read.csv(here("./data/original/surveys/02-self_assessment_with_questions.tsv"),
-                    sep = '\t',
-                    stringsAsFactors = TRUE) # need numeric matrix to calculate distance
+persona <- readr::read_tsv(here("./data/original/surveys/02-self_assessment_with_questions.tsv"), )
 
 wide <- persona %>%
   dplyr::select(id, question_part, response) %>%
@@ -17,12 +15,36 @@ wide <- persona %>%
   tidyr::drop_na() %>%
   {.}
 
-# Euclidean distance
-dist <- dist(wide[-1, ], diag = TRUE)
+# make sure the row names are the same as the IDs before dropping
+rownames(wide) <- wide$id
+stopifnot(all(rownames(wide) == wide$id))
+
+wide <- dplyr::select(wide, -id)
+
+# should only have the text responses to convert to factors
+stopifnot(all(lapply(wide, class) == "character"))
+q3.1_unique <- length(wide$Q3.1 %>% unique())
+numeric_data <- purrr::map_df(wide, ~as.numeric(as.factor(.)))
+stopifnot(length(unique(numeric_data$Q3.1)) == q3.1_unique)
+
+
+pca_persona <- prcomp(numeric_data)
+
+summary(pca_persona)
+
+# Euclidean distance, drops the first column of IDs
+dist <- dist(numeric_data, method = "euclidean")
+
+class(dist)
 
 # Hierarchical Clustering with hclust
-hc <- hclust(dist)
-
+hc_complete <- hclust(dist, method = "complete")
 # Plot the result
-plot(hc)
+plot(hc_complete)
+
+
+
+hc_ward <- hclust(dist, method = "ward.D")
+# Plot the result
+plot(hc_ward)
 
