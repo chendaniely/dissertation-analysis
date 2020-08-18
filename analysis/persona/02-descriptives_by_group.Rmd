@@ -103,7 +103,8 @@ likert_questions5 <- metadata[["questions"]][["QID19"]][["subQuestions"]] %>%
 ```{r}
 likert_q_count5 <- likert_questions5 %>%
   dplyr::group_by(group5, text) %>%
-  dplyr::count(response)
+  dplyr::count(response) %>%
+  dplyr::filter(!is.na(group5))
 ```
 
 
