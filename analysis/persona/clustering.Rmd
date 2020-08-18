@@ -1,8 +1,24 @@
+---
+title: "Clustering"
+output: 
+  html_document: 
+    toc: yes
+    df_print: kable
+    fig_width: 8
+    fig_height: 5
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.width = 8, fig.height = 5)
+
 library(here)
 library(readr)
 library(dplyr)
 library(tidyr)
-
+library(cluster)
+library(purrr)
 
 persona <- readr::read_tsv(here("./data/original/surveys/02-self_assessment_with_questions.tsv"), )
 
@@ -26,25 +42,47 @@ stopifnot(all(lapply(wide, class) == "character"))
 q3.1_unique <- length(wide$Q3.1 %>% unique())
 numeric_data <- purrr::map_df(wide, ~as.numeric(as.factor(.)))
 stopifnot(length(unique(numeric_data$Q3.1)) == q3.1_unique)
+```
 
+# PCA
 
+```{r}
 pca_persona <- prcomp(numeric_data)
 
 summary(pca_persona)
+```
 
+Half of the components account for >90% of the variance.
+Will need to confirm these results with factor analysis,
+but this makes sense since I tried to ask the same questions in 2 ways.
+
+# Hierarchical Clustering
+
+https://uc-r.github.io/hc_clustering
+
+```{r}
 # Euclidean distance, drops the first column of IDs
 dist <- dist(numeric_data, method = "euclidean")
+```
 
-class(dist)
 
+## Complete
+
+Computes pairwise similarities, and the "most" (i.e., maximum) similar ones are grouped together
+
+```{r}
 # Hierarchical Clustering with hclust
 hc_complete <- hclust(dist, method = "complete")
 # Plot the result
-plot(hc_complete)
+plot(hc_complete, cex = 0.6, hang = -1)
+```
 
+## Ward's
 
+Minimizes the total **within cluster** variance
 
+```{r}
 hc_ward <- hclust(dist, method = "ward.D")
 # Plot the result
-plot(hc_ward)
-
+plot(hc_ward, cex = 0.6, hang = -1)
+```
