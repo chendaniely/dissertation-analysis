@@ -1,6 +1,9 @@
 data/
 output/
 
+# rmarkdown knitr files
+*_files/
+
 *.html
 
 # History files
