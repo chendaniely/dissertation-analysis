@@ -14,9 +14,13 @@ files_to_delete <- c(analysis_html, qualtrics_files, persona_files)
 purrr::walk(files_to_delete, fs::file_delete)
 
 # Qualtrics -----
+
+## Get the qualtrics data -----
+# really only need to these this once
 source(here("analysis/qualtrics/01-process_qualtrics.R"))
 source(here("analysis/qualtrics/02-combine_metadata.R"))
 
+## Run the qualtrics analysis
 rmarkdown::render(
   here("analysis/qualtrics/03-self_assessment_persona_descriptives.Rmd"),
   output_dir = here("./output/survey/01-self_assessment/")
