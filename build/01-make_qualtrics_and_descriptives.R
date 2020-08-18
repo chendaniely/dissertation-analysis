@@ -1,6 +1,14 @@
 library(here)
 library(rmarkdown)
+library(fs)
+library(purrr)
 
+# Clean -----
+
+analysis_html <- fs::dir_ls(here("analysis"), recurse = TRUE, glob = "*.html")
+purrr::walk(analysis_html, fs::file_delete)
+
+# Qualtrics -----
 source(here("analysis/qualtrics/01-process_qualtrics.R"))
 source(here("analysis/qualtrics/02-combine_metadata.R"))
 
