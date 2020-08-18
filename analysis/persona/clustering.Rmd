@@ -44,6 +44,26 @@ numeric_data <- purrr::map_df(wide, ~as.numeric(as.factor(.)))
 stopifnot(length(unique(numeric_data$Q3.1)) == q3.1_unique)
 ```
 
+# The data
+
+```{r}
+head(numeric_data)
+```
+
+The data are the numeric (factor) survey responses.
+They are not `scale`d, but the units are arbitrary.
+Using `scale` would scale/standardize the results.
+But these are factor responses, not an actual measurement.
+**This needs to be consulted.**
+
+Scaling the data would look like this:
+
+```{r}
+scale(numeric_data)[1:5, 1:6]
+```
+
+
+
 # PCA
 
 ```{r}
