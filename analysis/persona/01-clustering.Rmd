@@ -22,16 +22,24 @@ library(cluster)
 library(purrr)
 library(factoextra)
 library(fs)
+library(utf8)
 
-persona <- readr::read_tsv(here("./data/original/surveys/02-self_assessment_with_questions.tsv"), )
+source(here::here("./analysis/qualtrics/question_str_to_int.R"))
+
+persona <- readr::read_tsv(here("./data/original/surveys/02-self_assessment_with_questions.tsv"))
 
 wide <- persona %>%
   dplyr::select(id, question_part, response) %>%
   dplyr::filter(stringr::str_starts(question_part, "Q[3|4|5|6]")) %>%
+  dplyr::filter(!stringr::str_starts(question_part, "Q3.2")) %>%
+  # # fixes curly approstrphe
+  # https://stackoverflow.com/questions/46814856/use-gsub-to-replace-curly-apostrophe-with-straight-apostrophe-in-r-list-of-chara
+  dplyr::mutate(response = utf8::utf8_normalize(response, map_quote = TRUE)) %>%
+  dplyr::mutate(response_numeric = purrr::map2_int(question_part, response, recode_responses_int)) %>%
+  dplyr::select(-response) %>%
   tidyr::pivot_wider(names_from = question_part,
-                     values_from = response) %>%
-  dplyr::select(-starts_with("Q3.2")) %>%
-  tidyr::drop_na() %>%
+                     values_from = response_numeric) %>%
+   tidyr::drop_na() %>%
   {.}
 
 # make sure the row names are the same as the IDs before dropping
@@ -40,13 +48,18 @@ stopifnot(all(rownames(wide) == wide$id))
 
 rownames(wide)
 
-# should only have the text responses to convert to factors
-stopifnot(all(lapply(wide, class) == "character"))
-q3.1_unique <- length(wide$Q3.1 %>% unique())
-numeric_data <- purrr::map_df(wide, ~as.numeric(as.factor(.)))
-stopifnot(length(unique(numeric_data$Q3.1)) == q3.1_unique)
+numeric_data <- wide
+```
 
-rownames(numeric_data) <- rownames(wide)
+```{r}
+
+# should only have the text responses to convert to factors
+# stopifnot(all(lapply(wide, class) == "character"))
+# q3.1_unique <- length(wide$Q3.1 %>% unique())
+# numeric_data <- purrr::map_df(wide, ~as.numeric(as.factor(.)))
+# stopifnot(length(unique(numeric_data$Q3.1)) == q3.1_unique)
+# 
+# rownames(numeric_data) <- rownames(wide)
 ```
 
 # The data
@@ -64,7 +77,12 @@ But these are factor responses, not an actual measurement.
 Scaling the data would look like this:
 
 ```{r}
-scale(numeric_data)[1:5, 1:6]
+numeric_data_scaled <- scale(numeric_data)
+```
+
+
+```{r}
+numeric_data_scaled[1:5, 1:6]
 ```
 
 
@@ -72,8 +90,8 @@ scale(numeric_data)[1:5, 1:6]
 # PCA
 
 ```{r}
-pca_persona <- prcomp(numeric_data)
-summary(pca_persona)
+pca_persona_scaled <- prcomp(numeric_data_scaled)
+summary(pca_persona_scaled)
 ```
 
 Half of the components account for >90% of the variance.
@@ -85,8 +103,7 @@ but this makes sense since I tried to ask the same questions in 2 ways.
 https://uc-r.github.io/hc_clustering
 
 ```{r}
-# Euclidean distance, drops the first column of IDs
-dist <- dist(numeric_data, method = "euclidean")
+dist <- dist(numeric_data_scaled, method = "euclidean")
 ```
 
 ## Finding the clustering method
@@ -116,7 +133,6 @@ hc_ward <- hclust(dist, method = "ward.D2")
 plot(hc_ward, cex = 0.6, hang = -1)
 ```
 
-
 ### Comparing dendograms
 
 Calculate agglomerative coefficient (closer to 1 mean stronger clustering structure)
@@ -125,13 +141,13 @@ Calculate agglomerative coefficient (closer to 1 mean stronger clustering struct
 m <- c("average", "single", "complete", "ward")
 names(m) <- c( "average", "single", "complete", "ward")
 
-purrr::map_dbl(m, ~ cluster::agnes(numeric_data, method = .)$ac)
+purrr::map_dbl(m, ~ cluster::agnes(numeric_data_scaled, method = .)$ac)
 ```
 
 Ward's gives us the best clustering structure
 
 ```{r}
-hc_agnes_wards <- agnes(numeric_data, method = "ward")
+hc_agnes_wards <- agnes(numeric_data_scaled, method = "ward")
 cluster::pltree(hc_agnes_wards, cex = 0.6, hang = -1, main = "Dendrogram of agnes")
 ```
 
@@ -142,6 +158,7 @@ hc_ward
 ```
 
 ```{r}
+sub_grp2 <- cutree(hc_ward, k = 2)
 sub_grp3 <- cutree(hc_ward, k = 3)
 sub_grp4 <- cutree(hc_ward, k = 4)
 sub_grp5 <- cutree(hc_ward, k = 5)
@@ -151,6 +168,7 @@ sub_grp6 <- cutree(hc_ward, k = 6)
 ```{r}
 numeric_data <- numeric_data %>%
   dplyr::mutate(
+    group2 = sub_grp2,
     group3 = sub_grp3,
     group4 = sub_grp4,
     group5 = sub_grp5,
@@ -158,6 +176,12 @@ numeric_data <- numeric_data %>%
   )
 rownames(numeric_data) <- rownames(wide)
 ```
+
+```{r}
+plot(hc_ward, cex = 0.6)
+rect.hclust(hc_ward, k = 2, border = 2:3)
+```
+
 
 ```{r}
 plot(hc_ward, cex = 0.6)
@@ -186,12 +210,10 @@ rect.hclust(hc_ward, k = 6, border = 2:7)
 https://uc-r.github.io/kmeans_clustering#elbow
 
 ```{r}
-factoextra::fviz_nbclust(numeric_data, FUN = factoextra::hcut, method = "wss")
+factoextra::fviz_nbclust(numeric_data_scaled, FUN = factoextra::hcut, method = "wss")
 ```
 
-Seems like 5 clusters is optimal (where the "elbow" bends).
 Will need to look at the results to see if they create meaningful personas
-
 
 # Write out group data
 
@@ -200,7 +222,7 @@ group_data <- numeric_data %>%
   tibble::rownames_to_column(var = "id") %>%
   dplyr::select(id, group5)
 
-stopifnot(nrow(numeric_data) == nrow(group_data))
+stopifnot(nrow(numeric_data_scaled) == nrow(group_data))
 
 stopifnot(all(unique(group_data$id) %in% unique(persona$id)))
 
