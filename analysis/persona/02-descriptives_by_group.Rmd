@@ -60,6 +60,13 @@ counts <- persona %>%
   dplyr::ungroup()
 ```
 
+```{r}
+persona %>%
+  dplyr::filter(qbase == "Q1.3") %>%
+  dplyr::group_by(group5) %>%
+  summarize(n = n())
+```
+
 # Question Bar Graphs
 
 ```{r}
@@ -160,7 +167,7 @@ likert_q_count5_prop <- likert_questions5 %>%
   dplyr::mutate(rel_freq = n / sum(n))
 ```
 
-```{r}
+```{r, fig.width=13, fig.height=8}
 g <- ggplot(likert_q_count5_prop,
        aes(x = x_factor,
            y = stringr::str_wrap(text, 50))) +
