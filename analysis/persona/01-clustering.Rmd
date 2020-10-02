@@ -215,6 +215,13 @@ dev.off()
 
 ### Finding optimal clusters
 
+```{r}
+# https://www.r-bloggers.com/2017/12/how-to-perform-hierarchical-clustering-using-r/
+# https://www.r-bloggers.com/2019/01/10-tips-for-choosing-the-optimal-number-of-clusters/
+```
+
+
+
 #### Elbow method
 
 https://uc-r.github.io/kmeans_clustering#elbow
@@ -222,6 +229,14 @@ https://uc-r.github.io/kmeans_clustering#elbow
 ```{r}
 factoextra::fviz_nbclust(numeric_data_scaled, FUN = factoextra::hcut, method = "wss")
 ```
+
+#### Gap statistic
+
+```{r}
+gap_stat <- clusGap(numeric_data_scaled, FUN = kmeans, nstart = 30, K.max = 24, B = 50)
+fviz_gap_stat(gap_stat) + theme_minimal() + ggtitle("fviz_gap_stat: Gap Statistic")
+```
+
 
 Will need to look at the results to see if they create meaningful personas
 
