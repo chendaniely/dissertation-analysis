@@ -245,10 +245,58 @@ Will need to look at the results to see if they create meaningful personas
 ```{r, include=FALSE}
 group_data <- numeric_data %>%
   tibble::rownames_to_column(var = "id") %>%
+  dplyr::select(id, group2)
+
+stopifnot(nrow(numeric_data_scaled) == nrow(group_data))
+stopifnot(all(unique(group_data$id) %in% unique(persona$id)))
+
+persona2 <- persona %>%
+  dplyr::mutate(id = as.character(id)) %>%
+  dplyr::left_join(group_data, by = c("id" = "id"))
+
+fs::dir_create(here("./data", "final", "persona"), recurse = TRUE)
+readr::write_tsv(persona2, here("./data/final/persona/persona_group_2.tsv"))
+```
+
+```{r, include=FALSE}
+group_data <- numeric_data %>%
+  tibble::rownames_to_column(var = "id") %>%
+  dplyr::select(id, group3)
+
+stopifnot(nrow(numeric_data_scaled) == nrow(group_data))
+stopifnot(all(unique(group_data$id) %in% unique(persona$id)))
+
+persona3 <- persona %>%
+  dplyr::mutate(id = as.character(id)) %>%
+  dplyr::left_join(group_data, by = c("id" = "id"))
+
+fs::dir_create(here("./data", "final", "persona"), recurse = TRUE)
+readr::write_tsv(persona3, here("./data/final/persona/persona_group_3.tsv"))
+```
+
+```{r, include=FALSE}
+group_data <- numeric_data %>%
+  tibble::rownames_to_column(var = "id") %>%
+  dplyr::select(id, group4)
+
+stopifnot(nrow(numeric_data_scaled) == nrow(group_data))
+stopifnot(all(unique(group_data$id) %in% unique(persona$id)))
+
+persona4 <- persona %>%
+  dplyr::mutate(id = as.character(id)) %>%
+  dplyr::left_join(group_data, by = c("id" = "id"))
+
+fs::dir_create(here("./data", "final", "persona"), recurse = TRUE)
+readr::write_tsv(persona4, here("./data/final/persona/persona_group_4.tsv"))
+```
+
+
+```{r, include=FALSE}
+group_data <- numeric_data %>%
+  tibble::rownames_to_column(var = "id") %>%
   dplyr::select(id, group5)
 
 stopifnot(nrow(numeric_data_scaled) == nrow(group_data))
-
 stopifnot(all(unique(group_data$id) %in% unique(persona$id)))
 
 persona5 <- persona %>%
