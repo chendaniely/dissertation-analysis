@@ -32,7 +32,11 @@ rmarkdown::render(
   output_dir = here("./output/persona/")
 )
 
-rmarkdown::render(
-  here("analysis/persona/02-descriptives_by_group.Rmd"),
-  output_dir = here("./output/persona/")
-)
+for (grp_n in 2:5) {
+  rmarkdown::render(
+    here("analysis/persona/02-descriptives_by_group.Rmd"),
+    output_dir = here("./output/persona/"),
+    output_file = glue::glue("02-descriptives_by_group_{grp_n}"),
+    params = list(num_clusters = grp_n)
+  )
+}

@@ -5,6 +5,8 @@ output:
     toc: yes
 editor_options: 
   chunk_output_type: console
+params:
+  num_clusters: 4
 ---
 
 ```{r setup, include=FALSE}
@@ -24,7 +26,7 @@ plot_question_bar <- function(dat) {
   ggplot(data = dat,
          aes(x = stringr::str_wrap(response, 60),
              y = n,
-             fill=as.factor(group5))
+             fill=as.factor((!!sym(gp_col))))
   ) +
     geom_bar(stat = "identity",
              position = "dodge2") +
@@ -46,24 +48,33 @@ plot_question_bar <- function(dat) {
     )
 }
 
-fs::dir_create(here("./output", "persona", "group_descriptives_5"), recurse = TRUE)
+fs::dir_create(here("./output", "persona", glue::glue("group_descriptives_{params$num_clusters}")), recurse = TRUE)
 
 
 # generated from clustering.Rmd
-persona <- readr::read_tsv(here("./data/final/persona/persona_group_5.tsv"))
+persona <- readr::read_tsv(here(glue::glue("./data/final/persona/persona_group_{params$num_clusters}.tsv")))
 metadata <- jsonlite::read_json(here("./data/original/surveys/02-self_assessment_metadata.json"))
 
+gp_col <- glue::glue("group{params$num_clusters}")
+
 counts <- persona %>%
-  dplyr::group_by(group5, qbase, question_text) %>%
+  dplyr::group_by((!!sym(gp_col)), qbase, question_text) %>%
   dplyr::count(response) %>%
   tidyr::drop_na() %>%
   dplyr::ungroup()
 ```
 
 ```{r}
+knitr::include_graphics(here::here(glue::glue(
+  "./output/persona/dendogram_{params$num_clusters}.png"
+)))
+```
+
+
+```{r}
 persona %>%
   dplyr::filter(qbase == "Q1.3") %>%
-  dplyr::group_by(group5) %>%
+  dplyr::group_by((!!sym(gp_col))) %>%
   summarize(n = n())
 ```
 
@@ -82,7 +93,7 @@ for (q in unique(counts$qbase)) {
   if (q %in% c("Q7.2", "Q7.3", "Q7.4")) {next}
 
   g <- plot_question_bar(dplyr::filter(counts, qbase == q))
-  pth <- here("./output", "persona", "group_descriptives_5", glue::glue("{q}.png"))
+  pth <- here("./output", "persona", glue::glue("group_descriptives_{params$num_clusters}"), glue::glue("{q}.png"))
   #print(pth)
   print(g)
   ggsave(filename = pth, plot = g, width = 8, height = 5, units = "in")
@@ -96,24 +107,24 @@ for (q in unique(counts$qbase)) {
 likert <- persona %>%
   dplyr::filter(qbase == "Q7.2")
 
-likert_questions5 <- metadata[["questions"]][["QID19"]][["subQuestions"]] %>%
+likert_questions_n <- metadata[["questions"]][["QID19"]][["subQuestions"]] %>%
   purrr::map(magrittr::extract2, "choiceText") %>%
   purrr::map_chr(magrittr::extract2, 1) %>%
   tibble::tibble(text = .) %>%
   dplyr::mutate(part = rownames(.)) %>%
   dplyr::mutate(question_part = paste0("Q7.2_", part)) %>%
   dplyr::full_join(likert, by = c("question_part")) %>%
-  dplyr::select(id, group5, qbase, qid, text, response)
+  dplyr::select(id, (!!sym(gp_col)), qbase, qid, text, response)
 
 ```
 
 ## Heatmap
 
 ```{r}
-likert_q_count5 <- likert_questions5 %>%
-  dplyr::group_by(group5, text) %>%
+likert_q_count_n <- likert_questions_n %>%
+  dplyr::group_by((!!sym(gp_col)), text) %>%
   dplyr::count(response) %>%
-  dplyr::filter(!is.na(group5))
+  dplyr::filter(!is.na((!!sym(gp_col))))
 ```
 
 
@@ -130,15 +141,15 @@ x_levels <- stringr::str_wrap(c(NA,
                                 "Neither Agree nor Disagree",
                                 "Somewhat Agree", "Agree", "Strongly Agree"),
                               x_wrap_len)
-x_factor <- factor(stringr::str_wrap(likert_q_count5$response, x_wrap_len),
+x_factor <- factor(stringr::str_wrap(likert_q_count_n$response, x_wrap_len),
                    levels = x_levels)
 
-g <- ggplot(likert_q_count5,
+g <- ggplot(likert_q_count_n,
        aes(x = x_factor,
            y = stringr::str_wrap(text, 50))) +
   geom_tile(aes(fill = n)) +
   geom_text(aes(label = n)) +
-  facet_wrap(~ group5) +
+  facet_wrap(as.formula(paste("~", gp_col))) +
   scale_fill_viridis() +
   xlab("") +
   ylab("") +
@@ -149,7 +160,10 @@ print(g)
 ```
 
 ```{r}
-ggsave(filename = here("./output", "persona", "group_descriptives_5", "likert.png"),
+ggsave(filename = here("./output",
+                       "persona",
+                       glue::glue("group_descriptives_{params$num_clusters}"),
+                       "likert.png"),
        plot = g,
        width = 13,
        height = 8,
@@ -159,21 +173,21 @@ ggsave(filename = here("./output", "persona", "group_descriptives_5", "likert.pn
 ## Heatmap by proportion in group
 
 ```{r}
-likert_q_count5_prop <- likert_questions5 %>%
-  dplyr::group_by(group5, text) %>%
+likert_q_count_n_prop <- likert_questions_n %>%
+  dplyr::group_by((!!sym(gp_col)), text) %>%
   dplyr::count(response) %>%
-  dplyr::filter(!is.na(group5)) %>%
-  dplyr::group_by(group5) %>%
+  dplyr::filter(!is.na((!!sym(gp_col)))) %>%
+  dplyr::group_by((!!sym(gp_col))) %>%
   dplyr::mutate(rel_freq = n / sum(n))
 ```
 
 ```{r, fig.width=13, fig.height=8}
-g <- ggplot(likert_q_count5_prop,
+g <- ggplot(likert_q_count_n_prop,
        aes(x = x_factor,
            y = stringr::str_wrap(text, 50))) +
   geom_tile(aes(fill = rel_freq)) +
   geom_text(aes(label = round(rel_freq, 1))) +
-  facet_wrap(~ group5) +
+  facet_wrap(as.formula(paste("~", gp_col))) +
   scale_fill_viridis() +
   xlab("") +
   ylab("") +
@@ -184,7 +198,10 @@ print(g)
 ```
 
 ```{r}
-ggsave(filename = here("./output", "persona", "group_descriptives_5", "likert_prop.png"),
+ggsave(filename = here("./output",
+                       "persona",
+                       glue::glue("group_descriptives_{params$num_clusters}"),
+                       "likert_prop.png"),
        plot = g,
        width = 13,
        height = 8,
@@ -202,18 +219,18 @@ ggsave(filename = here("./output", "persona", "group_descriptives_5", "likert_pr
 ```{r}
 reponse_table <- persona %>%
   dplyr::filter(qbase == "Q7.3" | qbase == "Q7.4") %>%
-  dplyr::select(group5, id, qbase, response) %>%
+  dplyr::select((!!sym(gp_col)), id, qbase, response) %>%
   tidyr::pivot_wider(names_from = qbase, values_from = response) %>%
   dplyr::filter(! (is.na(Q7.3) & is.na(Q7.4))) %>%
-  dplyr::arrange(group5, id)
+  dplyr::arrange((!!sym(gp_col)), id)
 
 reponse_table %>%
   knitr::kable() %>%
   kableExtra::kable_styling(bootstrap_options = c("striped", "hover")) %>%
-  kableExtra::row_spec(which(reponse_table$group5 == 1), color = "white", background = .GlobalEnv$COLORS[1]) %>%
-  kableExtra::row_spec(which(reponse_table$group5 == 2), color = "white", background = .GlobalEnv$COLORS[2]) %>%
-  kableExtra::row_spec(which(reponse_table$group5 == 3), color = "white", background = .GlobalEnv$COLORS[3]) %>%
-  kableExtra::row_spec(which(reponse_table$group5 == 4), color = "white", background = .GlobalEnv$COLORS[4]) %>%
-  kableExtra::row_spec(which(reponse_table$group5 == 5), color = "white", background = .GlobalEnv$COLORS[5])
+  kableExtra::row_spec(which(reponse_table[gp_col] == 1), color = "white", background = .GlobalEnv$COLORS[1]) %>%
+  kableExtra::row_spec(which(reponse_table[gp_col] == 2), color = "white", background = .GlobalEnv$COLORS[2]) %>%
+  kableExtra::row_spec(which(reponse_table[gp_col] == 3), color = "white", background = .GlobalEnv$COLORS[3]) %>%
+  kableExtra::row_spec(which(reponse_table[gp_col] == 4), color = "white", background = .GlobalEnv$COLORS[4]) %>%
+  kableExtra::row_spec(which(reponse_table[gp_col] == 5), color = "white", background = .GlobalEnv$COLORS[5])
   
 ```
