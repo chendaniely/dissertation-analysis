@@ -1,0 +1,274 @@
+---
+title: "PCA and Factor Analysis"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+library(readr)
+library(tibble)
+library(psych)
+library(here)
+library(dplyr)
+
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+numeric <- readr::read_csv(here::here("./data/final/persona/01-participant_numeric.csv"))
+
+numeric <- tibble::column_to_rownames(numeric, var = "id")
+scaled <- scale(numeric)
+```
+
+# EFA
+
+Taken from: https://www.statmethods.net/advstats/factor.html
+
+```{r}
+# Determine Number of Factors to Extract
+library(nFactors)
+ev <- eigen(cor(scaled)) # get eigenvalues
+ap <- parallel(subject = nrow(scaled),
+               var=ncol(scaled),
+               rep=100,
+               cent=.05)
+nS <- nScree(x=ev$values,
+             aparallel=ap$eigen$qevpea)
+plotnScree(nS) 
+```
+
+
+### 2 Loadings
+
+```{r}
+efa2 <- factanal(scaled, factors = 2, rotation = "varimax")
+print(efa2, digits=2, cutoff=.3, sort=TRUE)
+```
+
+```{r}
+efa2 <- factanal(scaled, factors = 2, rotation = "promax")
+print(efa2, digits=2, cutoff=.3, sort=TRUE)
+```
+
+```{r}
+f2 <- fa(scaled, 2)
+factor.stats(scaled, f2, n.obs = nrow(scaled))
+
+f2o <- fa(scaled, 2, fm="pa", rotate="Promax")
+factor.stats(scaled, f2o, n.obs = nrow(scaled))
+```
+
+
+```{r}
+load <- efa2$loadings[, 1:2]
+plot(load,type="n") # set up plot
+text(load,labels=names(numeric),cex=.7) # add variable names 
+```
+
+### 3 Loadings
+
+```{r}
+efa3 <- factanal(scaled, factors = 3, rotation = "varimax")
+print(efa3, digits=2, cutoff=.3, sort=TRUE)
+```
+
+```{r}
+efa3 <- factanal(scaled, factors = 3, rotation = "promax")
+print(efa3, digits=2, cutoff=.3, sort=TRUE)
+```
+
+```{r}
+psych::fac(scaled, nfactors = 3, rotate = "promax")
+```
+
+```{r}
+psych::fac(scaled, nfactors = 2, rotate = "promax")
+```
+
+
+
+
+```{r}
+f3 <- fa(scaled, 3)
+factor.stats(scaled, f3, n.obs = nrow(scaled))
+
+f3o <- fa(scaled, 3, fm="pa", rotate="Promax")
+factor.stats(scaled, f3o, n.obs = nrow(scaled))
+```
+
+
+```{r}
+load <- efa3$loadings[, 1:2]
+plot(load,type="n") # set up plot
+text(load,labels=names(numeric),cex=.7) # add variable names 
+```
+
+### 4 Loadings
+
+```{r}
+efa4 <- factanal(scaled, factors = 4, rotation = "varimax")
+print(efa4, digits=2, cutoff=.3, sort=TRUE)
+```
+
+```{r}
+efa4 <- factanal(scaled, factors = 4, rotation = "promax")
+print(efa4, digits=2, cutoff=.3, sort=TRUE)
+```
+
+```{r}
+load <- efa3$loadings[, 1:2]
+plot(load,type="n") # set up plot
+text(load,labels=names(numeric),cex=.7) # add variable names 
+```
+
+Looking at the CFA results and interprebility, I'm using 3 factors.
+Results using promax rotation.
+
+- Programming:
+  - Q3.3: How familiar are you with interactive programming languages like Python or R?
+- Stats:
+  - Q6.2: If you were given a dateset containing an individual's smoking status (binary variable) and whether or not they have hypertension (binary variable), would you know how to conduct a statistical analysis to see if smoking has an increased relative risk or odds of hypertension? Any type of model will suffice.
+- Data:
+  - Q4.4: Do you know what "long" and "wide" data are?
+
+```{r}
+scaled_subq <- scaled[, c("Q3.3", "Q6.2", "Q4.4")]
+```
+
+```{r}
+scaled_subq
+```
+
+```{r}
+dist <- dist(scaled_subq, method = "euclidean")
+hc_ward <- hclust(dist, method = "ward.D2")
+# Plot the result
+plot(hc_ward, cex = 0.6, hang = -1)
+```
+
+```{r}
+sub_grp4 <- cutree(hc_ward, k = 4)
+sub_grp5 <- cutree(hc_ward, k = 5)
+```
+
+```{r}
+numeric <- numeric %>%
+  dplyr::mutate(
+    group4 = sub_grp4,
+    group5 = sub_grp5,
+  )
+rownames(numeric) <- rownames(scaled_subq)
+```
+
+```{r}
+#png(here::here("./output/persona/dendogram_4.png"), width = 13, height = 8, units = "in", res = 72)
+plot(hc_ward, cex = 0.6)
+rect.hclust(hc_ward, k = 4, border = 2:5)
+#dev.off()
+```
+
+```{r}
+#png(here::here("./output/persona/dendogram_5.png"), width = 13, height = 8, units = "in", res = 72)
+plot(hc_ward, cex = 0.6)
+rect.hclust(hc_ward, k = 5, border = 2:6)
+#dev.off()
+```
+
+Comparing original dendogram results with subsetted results
+
+```{r}
+persona4 <- readr::read_tsv(here("./data/final/persona/persona_group_4.tsv"))
+
+id4 <- persona4 %>%
+  dplyr::select(id, group4) %>%
+  dplyr::distinct() %>%
+  dplyr::arrange(group4) %>%
+  dplyr::mutate(id = as.character(id))
+```
+
+```{r}
+efa4 <- numeric
+efa4$id <- rownames(efa4)
+efa4 <- efa4[, c("id", "group4")] %>%
+  dplyr::arrange(group4) %>%
+  #dplyr::mutate(id = as.numeric(id)) %>%
+  {.}
+```
+
+```{r}
+id4
+```
+
+```{r}
+efa4
+```
+
+```{r}
+joined_id_group <- dplyr::left_join(id4, efa4, by = "id", suffix = c("_dendo", "_efa")) %>%
+  dplyr::mutate(
+    group_match = dplyr::if_else(group4_dendo == group4_efa, TRUE, FALSE)
+  )
+```
+
+```{r}
+joined_id_group %>%
+  dplyr::group_by(group4_dendo) %>%
+  dplyr::summarize(matches = sum(group_match),
+                   total = n(),
+                   prop_match = round(matches / total, digits = 2)) %>%
+  knitr::kable()
+```
+
+
+# CART
+
+- 6.2
+  1. "I wouldn't know where to start",
+  2. "I could struggle through, but not confident I could do it",
+  3. "I could struggle through by trial and error with a lot of web searches",
+  4. "I could do it quickly with little or no use of external help"
+
+- 3.3
+  1. "I do not know what those are",
+  2. "I have heard of them but have never used them before",
+  3. "I have installed it, but have only done simple examples with them",
+  4. "I have written a small program with them before",
+  5. "I use it to automate certain repetitive tasks",
+  6. "I have small side projects that I program in it",
+  7. "I program in them for work"
+
+- 4.4
+  1. "I have never heard of the term",
+  2. "I have heard of it but don't remember what it is.",
+  3. "I have some idea of what it is, but am not too clear",
+  4. "I know what it is and could explain what it pertains to"
+
+```{r}
+library(rpart)
+
+tree_dat <- numeric %>%
+  dplyr::select(group4, starts_with("Q")) %>%
+  tibble::rownames_to_column("id") %>%
+  dplyr::left_join(efa4, by="id", suffix = c("_dendo", "_efa")) %>%
+  dplyr::select(group4_efa, starts_with("Q"))
+
+model <- rpart(group4_efa ~ ., data = tree_dat)
+par(xpd = NA) # otherwise on some devices the text is clipped
+plot(model)
+text(model, digits = 3)
+```
+
+```{r}
+library(rpart)
+tree_dat_all_q <- numeric %>%
+  select(group4, starts_with("Q"))
+
+model_all_q <- rpart(group4 ~ ., data = tree_dat_all_q)
+
+par(xpd = model_all_q) # otherwise on some devices the text is clipped
+plot(model_all_q)
+text(model_all_q, digits = 3)
+```
+
