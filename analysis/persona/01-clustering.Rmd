@@ -42,6 +42,9 @@ wide <- persona %>%
    tidyr::drop_na() %>%
   {.}
 
+# save out data before col to rownames
+readr::write_csv(wide, here::here("./data/final/persona/01-participant_numeric.csv"))
+
 # make sure the row names are the same as the IDs before dropping
 wide <- tibble::column_to_rownames(wide, var = "id")
 stopifnot(all(rownames(wide) == wide$id))
