@@ -7,6 +7,7 @@ library(purrr)
 library(glue)
 
 source(here("./R/remove_identifiers.R"))
+source(here("./analysis/01-qualtrics/survey_search_names.R"))
 
 # https://github.com/ropensci/qualtRics
 # QUALTRICS_BASE_URL="virginiatech.ca1.qualtrics.com"
@@ -15,13 +16,8 @@ source(here("./R/remove_identifiers.R"))
 readRenviron("~/.Renviron")
 
 ## Get qualtrics surveys -----
-
 surveys <- all_surveys()
-survey_names <- c("persona",
-                  "pre-workshop survey",
-                  "post-workshop survey")
-
-survey_ids <- purrr::map_chr(survey_names, ~ surveys$id[stringr::str_detect(surveys$name, .)])
+survey_ids <- purrr::map_chr(.GlobalEnv$survey_names, ~ surveys$id[stringr::str_detect(surveys$name, .)])
 
 survey_dfs <- purrr::map(survey_ids,
                          ~ qualtRics::fetch_survey(surveyID = .,
