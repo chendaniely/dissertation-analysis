@@ -7,36 +7,81 @@ library(rvest)
 library(jsonlite)
 
 source(here("R/strip_html.R"))
+source(here("./analysis/01-qualtrics/survey_search_names.R"))
+
+## Load raw data from qualtrics -----
 
 surveys <- all_surveys()
-self_assessment_id <-  surveys$id[stringr::str_detect(surveys$name, "student_survey")]
+ds4biomed_survey_ids <- purrr::map_chr(.GlobalEnv$survey_names, ~ surveys$id[stringr::str_detect(surveys$name, .)])
 
-meta_self_assessment <- qualtRics::metadata(surveyID = self_assessment_id, get = list(questions = TRUE))
-questions_self_assessment <- qualtRics::survey_questions(self_assessment_id)
-survey_self_assessment <- readr::read_tsv(here("./data/original/surveys/01-self_assessment_persona.tsv"))
+# meta_self_assessment <- qualtRics::metadata(surveyID = self_assessment_id, get = list(questions = TRUE))
+ds4biomed_survey_metadata <- purrr::map(ds4biomed_survey_ids, qualtRics::metadata, get = list(questions = TRUE))
 
+# questions_self_assessment <- qualtRics::survey_questions(self_assessment_id)
+ds4biomed_survey_questions <- purrr::map(ds4biomed_survey_ids, qualtRics::survey_questions)
 
-# don't need to manually parse questions becuase of the survey_questions function
-# meta_self_assessment <- tibble::tibble(survey = "student_survey",
-#                                        meta_questions = meta__self_assessment$questions)
-# 
-# tidyr::hoist(meta_self_assessment, meta_questions,
-#              "questionText",
-#              "questionName"
-#              )
+## Read deidentified qualtrics data -----
 
-questions_self_assessment$question <- purrr::map_chr(questions_self_assessment$question, strip_html)
+# survey_self_assessment <- readr::read_tsv(here("./data/original/surveys/01-self_assessment_persona.tsv"))
+# this is copied from the 01- script
+survey_save_pths <- c(
+  here("./data/original/surveys/01-01-self_assessment_persona.tsv"),
+  here("./data/original/surveys/01-02-pre_workshop.tsv"),
+  here("./data/original/surveys/01-03-post_workshop.tsv")
+)
+ds4biomed_survey_dfs <- purrr::map(survey_save_pths, readr::read_tsv)
 
-survey_self_assessment_w_q <- survey_self_assessment %>%
-  dplyr::select(-StartDate, -EndDate, -Status, -Progress) %>%
-  tidyr::pivot_longer(starts_with("Q"), names_to = "question", values_to = "response") %>%
-  dplyr::mutate(qbase = stringr::str_split_fixed(question, "_", 2)[, 1]) %>%
-  dplyr::full_join(questions_self_assessment, by = c("qbase" = "qname"), suffix=c("_part", "_text"))
+purrr::walk(ds4biomed_survey_dfs, ~ print(dim(.)))
 
+## Strip html from question column-----
 
-jsonlite::write_json(meta_self_assessment,
-                     here("./data/original/surveys/02-self_assessment_metadata.json"))
-readr::write_tsv(questions_self_assessment,
-                 here("./data/original/surveys/02-self_assessment_questions_meta.tsv"))
-readr::write_tsv(survey_self_assessment_w_q,
-                 here("./data/original/surveys/02-self_assessment_with_questions.tsv"))
+# questions_self_assessment$question <- purrr::map_chr(questions_self_assessment$question, strip_html)
+purrr::walk(ds4biomed_survey_questions, function(x) {x$question %>% head(2) %>% print()})
+ds4biomed_survey_questions <- purrr::map(ds4biomed_survey_questions,
+                                         function(dat) {
+                                           dat %>%
+                                             dplyr::mutate(question = purrr::map_chr(question, strip_html))
+                                         }
+)
+purrr::walk(ds4biomed_survey_questions, function(x) {x$question %>% head(2) %>% print()})
+
+## Combine metadata info with deidentified data -----
+
+# survey_self_assessment_w_q <- survey_self_assessment %>%
+#   dplyr::select(-StartDate, -EndDate, -Status, -Progress) %>%
+#   tidyr::pivot_longer(starts_with("Q"), names_to = "question", values_to = "response") %>%
+#   dplyr::mutate(qbase = stringr::str_split_fixed(question, "_", 2)[, 1]) %>%
+#   dplyr::full_join(questions_self_assessment, by = c("qbase" = "qname"), suffix=c("_part", "_text"))
+
+ds4biomed_surveys_with_questions <- purrr::map2(ds4biomed_survey_dfs, ds4biomed_survey_questions,
+                                                function(survey_dat, question_dat) {
+                                                  survey_dat %>%
+                                                    dplyr::select(-StartDate, -EndDate, -Status, -Progress) %>%
+                                                    tidyr::pivot_longer(starts_with("Q"), names_to = "question", values_to = "response") %>%
+                                                    dplyr::mutate(qbase = stringr::str_split_fixed(question, "_", 2)[, 1]) %>%
+                                                    dplyr::full_join(question_dat, by = c("qbase" = "qname"), suffix=c("_part", "_text"))
+                                                })
+
+## Save out data -----
+
+# jsonlite::write_json(meta_self_assessment, here("./data/original/surveys/02-self_assessment_metadata.json"))
+# readr::write_tsv(questions_self_assessment, here("./data/original/surveys/02-self_assessment_questions_meta.tsv"))
+# readr::write_tsv(survey_self_assessment_w_q, here("./data/original/surveys/02-self_assessment_with_questions.tsv"))
+
+survey_meta_pth <- c(here("./data/original/surveys/02-01-self_assessment_persona_metadata.json"),
+                     here("./data/original/surveys/02-02-pre_workshop_metadata.json"),
+                     here("./data/original/surveys/02-03-post_workshop_metadata.json")
+)
+purrr::walk2(ds4biomed_survey_metadata, survey_meta_pth, jsonlite::write_json)
+
+question_meta_pth <- c(here("./data/original/surveys/02-01-self_assessment_persona_questions_meta.tsv"),
+                  here("./data/original/surveys/02-02-pre_workshop_questions_meta.tsv"),
+                  here("./data/original/surveys/02-03-post_workshop_questions_meta.tsv")
+                  )
+purrr::walk2(ds4biomed_survey_questions, question_meta_pth, readr::write_tsv)
+
+survey_w_question_pth <- c(here("./data/original/surveys/02-01-self_assessment_persona_with_questions.tsv"),
+                           here("./data/original/surveys/02-02-pre_workshop_with_questions.tsv"),
+                           here("./data/original/surveys/02-03-post_workshop_with_questions.tsv")
+)
+purrr::walk2(ds4biomed_surveys_with_questions, survey_w_question_pth, readr::write_tsv)
