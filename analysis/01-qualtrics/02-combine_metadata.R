@@ -64,24 +64,27 @@ ds4biomed_surveys_with_questions <- purrr::map2(ds4biomed_survey_dfs, ds4biomed_
 
 ## Save out data -----
 
+fs::dir_create(here("./data/final/01-surveys"), recurse = TRUE)
+
+
 # jsonlite::write_json(meta_self_assessment, here("./data/original/surveys/02-self_assessment_metadata.json"))
 # readr::write_tsv(questions_self_assessment, here("./data/original/surveys/02-self_assessment_questions_meta.tsv"))
 # readr::write_tsv(survey_self_assessment_w_q, here("./data/original/surveys/02-self_assessment_with_questions.tsv"))
 
-survey_meta_pth <- c(here("./data/original/surveys/02-01-self_assessment_persona_metadata.json"),
-                     here("./data/original/surveys/02-02-pre_workshop_metadata.json"),
-                     here("./data/original/surveys/02-03-post_workshop_metadata.json")
+survey_meta_pth <- c(here("./data/final/01-surveys/01-self_assessment_persona_metadata.json"),
+                     here("./data/final/01-surveys/02-pre_workshop_metadata.json"),
+                     here("./data/final/01-surveys/03-post_workshop_metadata.json")
 )
 purrr::walk2(ds4biomed_survey_metadata, survey_meta_pth, jsonlite::write_json)
 
-question_meta_pth <- c(here("./data/original/surveys/02-01-self_assessment_persona_questions_meta.tsv"),
-                  here("./data/original/surveys/02-02-pre_workshop_questions_meta.tsv"),
-                  here("./data/original/surveys/02-03-post_workshop_questions_meta.tsv")
+question_meta_pth <- c(here("./data/final/01-surveys/01-self_assessment_persona_questions_meta.tsv"),
+                  here("./data/final/01-surveys/02-pre_workshop_questions_meta.tsv"),
+                  here("./data/final/01-surveys/03-post_workshop_questions_meta.tsv")
                   )
 purrr::walk2(ds4biomed_survey_questions, question_meta_pth, readr::write_tsv)
 
-survey_w_question_pth <- c(here("./data/original/surveys/02-01-self_assessment_persona_with_questions.tsv"),
-                           here("./data/original/surveys/02-02-pre_workshop_with_questions.tsv"),
-                           here("./data/original/surveys/02-03-post_workshop_with_questions.tsv")
+survey_w_question_pth <- c(here("./data/final/01-surveys/01-self_assessment_persona_with_questions.tsv"),
+                           here("./data/final/01-surveys/02-pre_workshop_with_questions.tsv"),
+                           here("./data/final/01-surveys/03-post_workshop_with_questions.tsv")
 )
 purrr::walk2(ds4biomed_surveys_with_questions, survey_w_question_pth, readr::write_tsv)
