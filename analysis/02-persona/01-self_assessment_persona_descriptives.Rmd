@@ -26,26 +26,11 @@ library(knitr)
 library(kableExtra)
 library(viridis)
 
+source(here("./R/plot_question_bar.R"))
+source(here("./R/likert.R"))
 
-plot_question_bar <- function(dat) {
-  ggplot(data = dat,
-         aes(x = stringr::str_wrap(response, 60),
-             y = n)
-  ) +
-    geom_bar(stat = "identity") +
-    xlab("") +
-    ylab("Count") +
-    #labels(line_break(dat$response)) +
-    coord_flip() +
-    ggtitle(stringr::str_wrap(dat$question_text, 80)) +
-    theme_minimal() +
-    theme(
-      plot.title.position = "plot"
-    )
-}
-
-metadata <- jsonlite::read_json(here("./data/original/surveys/02-self_assessment_metadata.json"))
-persona <- readr::read_tsv(here("./data/original/surveys/02-self_assessment_with_questions.tsv"))
+metadata <- jsonlite::read_json(here("./data/final/01-surveys/01-self_assessment_persona_metadata.json"))
+persona <- readr::read_tsv(here("./data/final/01-surveys/01-self_assessment_persona_with_questions.tsv"))
 
 counts <- persona %>%
   dplyr::group_by(qbase, question_text) %>%
@@ -56,6 +41,18 @@ counts <- persona %>%
 ```{r}
 # plot_question_bar(dplyr::filter(counts, qbase==unique(counts$qbase)[[11]]))
 ```
+
+## Other responses
+
+```{r}
+persona %>%
+  dplyr::filter(stringr::str_detect(question_part, "TEXT")) %>%
+  tidyr::drop_na() %>%
+  group_by(question_part) %>%
+  count(response) %>%
+  print(n = 50)
+```
+
 
 # Question Bar Graphs
 
@@ -77,57 +74,13 @@ for (q in unique(counts$qbase)) {
 # Likert table
 
 ```{r, fig.width=8, fig.height=5}
-likert <- persona %>%
-  dplyr::filter(qbase == "Q7.2")
+qbase <- "Q7.2"
+qid <- get_qid_from_qbase(persona, qbase)
+qid
 
-likert_questions <- metadata[["questions"]][["QID19"]][["subQuestions"]] %>%
-  purrr::map(magrittr::extract2, "choiceText") %>%
-  purrr::map_chr(magrittr::extract2, 1) %>%
-  tibble::tibble(text = .) %>%
-  dplyr::mutate(part = rownames(.)) %>%
-  dplyr::mutate(question_part = paste0("Q7.2_", part)) %>%
-  dplyr::full_join(likert, by = c("question_part")) %>%
-  dplyr::select(id, qbase, qid, text, response)
-
-```
-
-## Heatmap
-
-```{r}
-likert_q_count <- likert_questions %>%
-  dplyr::group_by(text) %>%
-  dplyr::count(response)
-```
-
-
-```{r}
-#table(likert_questions$text, likert_questions$response)
-```
-
-```{r, fig.width=8, fig.height=5}
-
-# word wrap and re-order the x axis before plotting
-x_wrap_len <- 10
-x_levels <- stringr::str_wrap(c(NA,
-                                "Strongly Disagree", "Disagree", "Somewhat Disagree",
-                                "Neither Agree nor Disagree",
-                                "Somewhat Agree", "Agree", "Strongly Agree"),
-                              x_wrap_len)
-x_factor <- factor(stringr::str_wrap(likert_q_count$response, x_wrap_len),
-                   levels = x_levels)
-
-g <- ggplot(likert_q_count,
-       aes(x = x_factor,
-           y = stringr::str_wrap(text, 50))) +
-  geom_tile(aes(fill = n)) +
-  geom_text(aes(label = n)) +
-  scale_fill_viridis() +
-  xlab("") +
-  ylab("") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = -45, hjust = 0, vjust = 1))
-  NULL
-print(g)
+likert_q_count <- likert_calculation(persona, metadata, qbase, qid)
+g <- likert_plot(likert_q_count %>% tidyr::drop_na())
+g
 ```
 
 ```{r}

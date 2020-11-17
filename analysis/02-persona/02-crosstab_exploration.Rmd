@@ -13,7 +13,7 @@ library(here)
 
 
 ```{r}
-persona <- readr::read_tsv(here("./data/original/surveys/02-self_assessment_with_questions.tsv"))
+persona <- readr::read_tsv(here("./data/final/01-surveys/01-self_assessment_persona_with_questions.tsv"))
 ```
 
 ```{r}
