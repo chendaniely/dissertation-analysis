@@ -3,7 +3,9 @@ library(dplyr)
 
 surveys <- all_surveys()
 
-self_assessment_id <-  surveys$id[stringr::str_detect(surveys$name, "October 20")]
+surveys$name
+
+self_assessment_id <-  surveys$id[stringr::str_detect(surveys$name, "workshop signup")]
 
 signup_emails <- self_assessment_id %>%
   qualtRics::fetch_survey(surveyID = .) %>%

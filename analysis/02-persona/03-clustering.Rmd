@@ -24,19 +24,20 @@ library(factoextra)
 library(fs)
 library(utf8)
 
-source(here::here("./analysis/qualtrics/question_str_to_int.R"))
+source(here::here("./analysis/01-qualtrics/question_str_to_int.R"))
 
-persona <- readr::read_tsv(here("./data/original/surveys/02-self_assessment_with_questions.tsv"))
+persona <- readr::read_tsv(here("./data/final/01-surveys/01-self_assessment_persona_with_questions.tsv"))
 
 wide <- persona %>%
   dplyr::select(id, question_part, response) %>%
   dplyr::filter(stringr::str_starts(question_part, "Q[3|4|5|6]")) %>%
-  dplyr::filter(!stringr::str_starts(question_part, "Q3.2")) %>%
+  dplyr::filter(!stringr::str_starts(question_part, "Q3.2")) %>% # drop "what programming language you have used in the past question
   # # fixes curly approstrphe
   # https://stackoverflow.com/questions/46814856/use-gsub-to-replace-curly-apostrophe-with-straight-apostrophe-in-r-list-of-chara
   dplyr::mutate(response = utf8::utf8_normalize(response, map_quote = TRUE)) %>%
   dplyr::mutate(response_numeric = purrr::map2_int(question_part, response, recode_responses_int)) %>%
   dplyr::select(-response) %>%
+   tidyr::drop_na() %>%
   tidyr::pivot_wider(names_from = question_part,
                      values_from = response_numeric) %>%
    tidyr::drop_na() %>%
@@ -95,6 +96,8 @@ numeric_data_scaled[1:5, 1:6]
 ```{r}
 pca_persona_scaled <- prcomp(numeric_data_scaled)
 summary(pca_persona_scaled)
+
+saveRDS(pca_persona_scaled, file = here("./output/persona/pca_results.RDS"))
 ```
 
 Half of the components account for >90% of the variance.
@@ -230,14 +233,18 @@ dev.off()
 https://uc-r.github.io/kmeans_clustering#elbow
 
 ```{r}
+png(here("./output/persona/elbow_plot.png"))
 factoextra::fviz_nbclust(numeric_data_scaled, FUN = factoextra::hcut, method = "wss")
+dev.off()
 ```
 
 #### Gap statistic
 
 ```{r}
+png(here("./output/persona/gap_statistic.png"))
 gap_stat <- clusGap(numeric_data_scaled, FUN = kmeans, nstart = 30, K.max = 24, B = 50)
 fviz_gap_stat(gap_stat) + theme_minimal() + ggtitle("fviz_gap_stat: Gap Statistic")
+dev.off()
 ```
 
 

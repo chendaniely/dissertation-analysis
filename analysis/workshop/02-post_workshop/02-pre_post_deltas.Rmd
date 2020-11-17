@@ -1,0 +1,84 @@
+---
+title: "Pre-post deltas"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+library(here)
+library(tidyr)
+library(ggplot2)
+library(viridis)
+library(dplyr)
+
+source(here("./R/likert.R"))
+
+pre_self <- readRDS(here("./data/final/pre-post-likert/pre-qcount-self_assessment.RDS"))
+post_self <- readRDS(here("./data/final/pre-post-likert/post-qcount-self_assessment.RDS"))
+
+pre_lo <- readRDS(here("./data/final/pre-post-likert/pre-qcount-learning_objectives.RDS"))
+post_lo <- readRDS(here("./data/final/pre-post-likert/post-qcount-learning_objectives.RDS"))
+```
+
+# Self-assessment
+
+```{r}
+likert_plot(pre_self %>% tidyr::drop_na(), label_type = "circle")
+```
+
+```{r}
+likert_plot(post_self %>% tidyr::drop_na())
+```
+
+```{r}
+pre_post_self <- pre_self %>%
+  dplyr::full_join(post_self, by = c("text", "response"), suffix = c("_pre", "_post")) %>%
+  tidyr::replace_na(list("n_pre" = 0, "n_post" = 0)) %>%
+  dplyr::mutate(delta = n_post - n_pre)
+pre_post_self
+```
+
+```{r}
+g <- likert_plot(pre_post_self %>% tidyr::drop_na(), count_col = "delta", label_type = "circle", scale = "diverging")
+g
+```
+
+```{r}
+ggsave(filename = here("./output", "survey", "03-post_workshop", "diff-likert-self_assessment.png"),
+       plot = g,
+       width = 8,
+       height = 5,
+       units = "in")
+```
+
+# Learning Objectives
+
+```{r}
+likert_plot(pre_lo %>% tidyr::drop_na())
+```
+
+```{r}
+likert_plot(post_lo %>% tidyr::drop_na())
+```
+
+```{r}
+pre_post_lo <- pre_lo %>%
+  dplyr::full_join(post_lo, by = c("text", "response"), suffix = c("_pre", "_post")) %>%
+  tidyr::replace_na(list("n_pre" = 0, "n_post" = 0)) %>%
+  dplyr::mutate(delta = n_post - n_pre)
+pre_post_lo
+```
+
+```{r}
+g <- likert_plot(pre_post_lo %>% tidyr::drop_na(), count_col = "delta", scale = "diverging")
+g
+```
+
+```{r}
+ggsave(filename = here("./output", "survey", "03-post_workshop", "diff-likert-learning_objectives.png"),
+       plot = g,
+       width = 8,
+       height = 5,
+       units = "in")
+```

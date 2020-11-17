@@ -36,7 +36,10 @@ ap <- parallel(subject = nrow(scaled),
                cent=.05)
 nS <- nScree(x=ev$values,
              aparallel=ap$eigen$qevpea)
-plotnScree(nS) 
+
+png(here::here("./output/persona/efa_eigen_scree.png"))
+plotnScree(nS)
+dev.off()
 ```
 
 
@@ -50,6 +53,8 @@ print(efa2, digits=2, cutoff=.3, sort=TRUE)
 ```{r}
 efa2 <- factanal(scaled, factors = 2, rotation = "promax")
 print(efa2, digits=2, cutoff=.3, sort=TRUE)
+
+saveRDS(efa2, here("./data/final/persona/efa2-promax.RDS"))
 ```
 
 ```{r}
@@ -77,6 +82,8 @@ print(efa3, digits=2, cutoff=.3, sort=TRUE)
 ```{r}
 efa3 <- factanal(scaled, factors = 3, rotation = "promax")
 print(efa3, digits=2, cutoff=.3, sort=TRUE)
+
+saveRDS(efa3, here("./data/final/persona/efa3-promax.RDS"))
 ```
 
 ```{r}
@@ -255,9 +262,12 @@ tree_dat <- numeric %>%
   dplyr::select(group4_efa, starts_with("Q"))
 
 model <- rpart(group4_efa ~ ., data = tree_dat)
+
+png(here("./output/persona/cart.png"))
 par(xpd = NA) # otherwise on some devices the text is clipped
 plot(model)
 text(model, digits = 3)
+dev.off()
 ```
 
 ```{r}

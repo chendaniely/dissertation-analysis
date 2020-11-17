@@ -1,0 +1,185 @@
+---
+title: "01-post_workshop_descriptives"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+library(here)
+library(readr)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(ggplot2)
+library(viridis)
+
+source(here("./R/plot_question_bar.R"))
+source(here("./R/likert.R"))
+
+postworkshop <- readr::read_tsv(here("./data/final/01-surveys/03-post_workshop_with_questions.tsv"))
+postworkshop_meta <- jsonlite::read_json(here("./data/final/01-surveys/03-post_workshop_metadata.json"))
+
+counts <- postworkshop %>%
+  dplyr::group_by(qbase, question_text) %>%
+  dplyr::count(response) %>%
+  tidyr::drop_na()
+```
+
+```{r}
+na.omit(postworkshop$id) %>% unique() %>% length()
+```
+
+```{r}
+postworkshop %>%
+  filter(Finished == TRUE) %>%
+  pull(id) %>%
+  na.omit() %>%
+  unique() %>%
+  length()
+```
+```{r}
+postworkshop %>%
+  dplyr::filter(stringr::str_detect(question_part, "TEXT")) %>%
+  tidyr::drop_na() %>%
+  group_by(question_part) %>%
+  count(response) %>%
+  print(n = 50)
+```
+
+```{r}
+fs::dir_create(here("./output", "survey", "03-post_workshop"), recurse = TRUE)
+
+for (q in unique(counts$qbase)) {
+  print(q)
+  
+  # remove likert tables and open response
+  if (q %in% c("Q3.1", "Q4.1", "Q4.2", "Q5.1","Q6.1", "Q6.2", "Q7.1", "Q7.2", "7.3")) {next} 
+
+  g <- plot_question_bar(dplyr::filter(counts, qbase == q))
+  
+  pth <- here("./output", "survey", "03-post_workshop", glue::glue("{q}.png"))
+  #print(pth)
+  print(g)
+  ggsave(filename = pth, plot = g, width = 8, height = 5, units = "in")
+}
+```
+
+```{r}
+postworkshop %>%
+  filter(qbase == "Q5.1")
+```
+
+
+# Likert
+
+## Summative assessment
+
+```{r}
+qbase <- "Q5.1"
+qid <- get_qid_from_qbase(postworkshop, qbase)
+qid
+
+likert_q_count <- likert_calculation(postworkshop, postworkshop_meta, qbase, qid)
+g <- likert_plot(likert_q_count %>% tidyr::drop_na(),
+                 level_names = c(NA,
+                                 "I wouldn't know where to start",
+                                 "I could struggle through, but not confident I could do it",
+                                 "I could struggle through by trial and error with a lot of web searches",
+                                 "I could do it quickly with little or no use of external help"),
+                 x_text_angle = 0,
+                 x_text_hjust = 0.5)
+g
+```
+
+```{r}
+fs::dir_create(here("./data", "final", "pre-post-likert"), recurse = TRUE)
+saveRDS(likert_q_count, here("./data", "final", "pre-post-likert", "post-qcount-summative_assessment.RDS"))
+```
+
+
+```{r}
+ggsave(filename = here("./output", "survey", "03-post_workshop", "likert-summative_assessment.png"),
+       plot = g,
+       width = 8,
+       height = 5,
+       units = "in")
+```
+
+
+## Environment
+
+```{r}
+qbase <- "Q3.1"
+qid <- get_qid_from_qbase(postworkshop, qbase)
+qid
+
+likert_q_count <- likert_calculation(postworkshop, postworkshop_meta, qbase, qid)
+g <- likert_plot(likert_q_count %>% tidyr::drop_na())
+g
+```
+
+```{r}
+fs::dir_create(here("./data", "final", "pre-post-likert"), recurse = TRUE)
+saveRDS(likert_q_count, here("./data", "final", "pre-post-likert", "post-qcount-environment.RDS"))
+```
+
+```{r}
+ggsave(filename = here("./output", "survey", "03-post_workshop", "likert-environment.png"),
+       plot = g,
+       width = 8,
+       height = 5,
+       units = "in")
+```
+
+## Self-assessment
+
+```{r}
+qbase <- "Q4.1"
+qid <- get_qid_from_qbase(postworkshop, qbase)
+qid
+
+likert_q_count <- likert_calculation(postworkshop, postworkshop_meta, qbase, qid)
+g <- likert_plot(likert_q_count %>% tidyr::drop_na())
+g
+```
+
+```{r}
+fs::dir_create(here("./data", "final", "pre-post-likert"), recurse = TRUE)
+saveRDS(likert_q_count, here("./data", "final", "pre-post-likert", "post-qcount-self_assessment.RDS"))
+```
+
+```{r}
+ggsave(filename = here("./output", "survey", "03-post_workshop", "likert-self_assessment.png"),
+       plot = g,
+       width = 8,
+       height = 5,
+       units = "in")
+```
+
+
+
+## Learning Objectives
+
+```{r}
+qbase <- "Q4.2"
+qid <- get_qid_from_qbase(postworkshop, qbase)
+qid
+
+likert_q_count <- likert_calculation(postworkshop, postworkshop_meta, qbase, qid)
+g <- likert_plot(likert_q_count %>% tidyr::drop_na())
+g
+```
+
+```{r}
+fs::dir_create(here("./data", "final", "pre-post-likert"), recurse = TRUE)
+saveRDS(likert_q_count, here("./data", "final", "pre-post-likert", "post-qcount-learning_objectives.RDS"))
+```
+
+```{r}
+ggsave(filename = here("./output", "survey", "03-post_workshop", "likert-learning_objectives.png"),
+       plot = g,
+       width = 8,
+       height = 5,
+       units = "in")
+```
