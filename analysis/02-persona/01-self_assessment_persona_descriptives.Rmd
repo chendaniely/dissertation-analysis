@@ -45,13 +45,128 @@ counts <- persona %>%
 ## Other responses
 
 ```{r}
-persona %>%
+text_responses <- persona %>%
   dplyr::filter(stringr::str_detect(question_part, "TEXT")) %>%
   tidyr::drop_na() %>%
   group_by(question_part) %>%
-  count(response) %>%
+  count(response)
+
+text_responses %>%
   print(n = 50)
 ```
+
+## Counts
+
+```{r}
+num_respondents <- persona$id %>%
+  unique() %>%
+  .[!is.na(.)] %>%
+  length()
+num_respondents
+```
+
+```{r}
+num_consented <- persona %>%
+  dplyr::filter(question_part %in% c("Q1.3", "Q1.4")) %>%
+  dplyr::select(id, question_part, response) %>%
+  dplyr::group_by(id, question_part) %>%
+  dplyr::filter(row_number() == 1) # selects only the first entry
+
+all(table(num_consented$id) == 2)
+
+num_consented %>%
+  filter(id == "29") # this was a problematic entry where individual took survey multiple attempts
+
+num_consented <- num_consented %>%
+  tidyr::pivot_wider(names_from = question_part,
+                     values_from = response) %>%
+  dplyr::mutate(
+    qualify = dplyr::case_when(
+      stringr::str_starts(Q1.3, "Yes") & stringr::str_starts(Q1.4, "Yes") ~ TRUE,
+      TRUE ~ FALSE
+    )
+  )
+
+stopifnot(any(duplicated(num_consented$id)) == FALSE)
+
+table(num_consented$qualify)
+
+num_consented <- length(num_consented$id)
+```
+
+
+
+```{r}
+persona %>%
+  dplyr::filter(is.na(id)) %>%
+  View()
+```
+
+
+
+## Grouped Demographics
+
+```{r}
+occuptation_choices <- purrr::map(metadata$questions$QID2$choices,
+                                      ~ magrittr::extract2(., "choiceText")) %>%
+  unlist()
+```
+
+
+```{r}
+occupation <- counts %>%
+  dplyr::filter(qbase == "Q2.3") %>%
+  dplyr::mutate(
+    group = dplyr::case_when(
+      response %in% c("Academic", "faculty", "PhD", "PhD (Professor)", "Analyst", "Research administrator", "Research Adminstrator", "healthcare administration, PhD, MPH", "Biomedical Technician") ~ "researcher",
+      response %in% c("RN/PA", "DO/MD") ~ "clinician",
+      stringr::str_detect(response, "Student") ~ "student"
+    )
+  )
+```
+
+```{r}
+# make sure the "other" counts are equal to sum of the text responses
+occupation %>%
+  dplyr::filter(!response %in% occuptation_choices) %>%
+  pull(n) %>%
+  sum() %>%
+  identical(occupation %>%
+              dplyr::filter(
+                response == "Other, please describe"
+              ) %>%
+              pull(n)) %>%
+  stopifnot()
+```
+
+```{r}
+occupation <- occupation %>%
+  tidyr::drop_na()
+```
+
+```{r}
+table(occupation$response, occupation$group)
+```
+
+```{r}
+total_occupation_counts <- occupation$n %>% sum()
+```
+
+
+```{r}
+ggplot(data = occupation, aes(x = group, y = n)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  coord_flip() +
+  labs(title = "Occupation Counts",
+       subtitle = glue::glue("n = {num_consented}, responses={total_occupation_counts}")) +
+    theme(text = element_text(size=20),
+          axis.title.x = element_blank(),
+          axis.title.y = element_blank())
+ggsave(here::here("./output", "survey", "01-self_assessment", "grouped_demographics.png"),
+       width = 5, height = 3, units = "in")
+```
+
 
 
 # Question Bar Graphs
