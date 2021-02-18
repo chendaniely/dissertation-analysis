@@ -100,6 +100,38 @@ summary(pca_persona_scaled)
 saveRDS(pca_persona_scaled, file = here("./output/persona/pca_results.RDS"))
 ```
 
+```{r}
+pca_table_mat <- t(summary(pca_persona_scaled)$importance)
+components <- rownames(pca_table_mat)
+
+pca_results_df <- pca_table_mat %>%
+  tibble::as_data_frame() %>%
+  dplyr::mutate(component = components,
+                compont_num = stringr::str_replace(component, "PC", "") %>%
+                  as.numeric())
+```
+
+```{r}
+ggplot(pca_results_df,
+       aes(x = as.factor(compont_num),
+           y = `Cumulative Proportion`,
+           group = 1)) +
+  geom_point() +
+  geom_line() +
+  ylim(0, 1) +
+  geom_hline(yintercept = 0.5, linetype = 'dashed', col = 'blue') +
+  geom_hline(yintercept = 0.9, linetype = 'longdash', col = 'red') +
+  annotate("text", x = "15", y = 0.5, label = "50%", vjust = 0) +
+  annotate("text", x = "15", y = 0.9, label = "90%", vjust = 0) +
+  labs(title = "Principal Component Results",
+       x = "Principal Component") +
+  theme_minimal() +
+  theme(text = element_text(size=20))
+
+ggsave(here("./output/persona/pca_cum_prop.png"))
+```
+
+
 Half of the components account for >90% of the variance.
 Will need to confirm these results with factor analysis,
 but this makes sense since I tried to ask the same questions in 2 ways.
