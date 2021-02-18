@@ -125,6 +125,29 @@ ggsave(filename = here("./output",
        units = "in")
 ```
 
+```{r}
+# likert plot for poster
+poster <- likert_plot(likert_q_count_n_prop %>% tidyr::drop_na(),
+                      count_col = "pct") +
+  facet_wrap(as.formula(glue::glue("~ {gp_col}")), ncol = 1) +
+  theme(legend.position = "none",
+        text = element_text(size=12)) +
+  ggtitle("Percent of Responses per Group")
+poster
+```
+
+```{r}
+ggsave(filename = here("./output",
+                       "persona",
+                       glue::glue("group_descriptives_{params$num_clusters}"),
+                       "likert_prop_poster.png"),
+       plot = poster,
+       width = 8,
+       height = 13,
+       units = "in")
+```
+
+
 # Free Response
 
 - Q7.3: Please share what you most hope to learn from participating in this workshop and/or workshop series. 
