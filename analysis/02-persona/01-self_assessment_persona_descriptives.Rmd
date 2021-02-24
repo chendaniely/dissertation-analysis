@@ -98,8 +98,7 @@ num_consented <- length(num_consented$id)
 
 ```{r}
 persona %>%
-  dplyr::filter(is.na(id)) %>%
-  View()
+  dplyr::filter(is.na(id))
 ```
 
 
