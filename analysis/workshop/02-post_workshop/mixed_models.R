@@ -133,15 +133,26 @@ stat_df <- responses %>%
 
 pre_post <- responses$pre_post
 
+pre_post == 1
 
 purrr::map_df(stat_df, ~ tidy(wilcox.test(pre_post, ., paired = FALSE, alternative = "two.sided"))) %>%
   dplyr::mutate(short_question = names(stat_df)) %>%
   dplyr::select(short_question, statistic, p.value)
 
-m <- purrr::map_df(stat_df, mean) %>% tidyr::pivot_longer(everything(), names_to = "variable", values_to = "mean")
-s <- purrr::map_df(stat_df, sd) %>% tidyr::pivot_longer(everything(), names_to = "variable", values_to = "sd")
+m <- purrr::map_df(stat_df[1:5, ], mean) %>% tidyr::pivot_longer(everything(), names_to = "variable", values_to = "mean")
+s <- purrr::map_df(stat_df[1:5, ], sd) %>% tidyr::pivot_longer(everything(), names_to = "variable", values_to = "sd")
 
-ms <- dplyr::full_join(m, s, by = "variable")
+ms1 <- dplyr::full_join(m, s, by = "variable")
+
+m2 <- purrr::map_df(stat_df[6:10, ], mean) %>% tidyr::pivot_longer(everything(), names_to = "variable", values_to = "mean")
+s2 <- purrr::map_df(stat_df[6:10, ], sd) %>% tidyr::pivot_longer(everything(), names_to = "variable", values_to = "sd")
+
+ms2 <- dplyr::full_join(m2, s2, by = "variable")
+
+ms1
+ms2
+
+
 
 responses[responses$pre_post == 0, "Assess spreadsheets", drop = TRUE] %>% mean()
 responses[responses$pre_post == 1, "Assess spreadsheets", drop = TRUE] %>% mean()
