@@ -1,0 +1,255 @@
+---
+title: "Cronbah's Alpha"
+author: "Daniel Chen"
+date: "Last compiled on `r format(Sys.time(), '%d %B, %Y')`"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readr)
+library(here)
+library(tibble)
+library(psych)
+library(dplyr)
+
+wide_survey_likert <- readr::read_csv(here::here("./data/final/persona/01-participant_numeric-wide_survey_likert.csv"))
+
+wide_survey_likert <- tibble::column_to_rownames(wide_survey_likert, var = "id")
+```
+
+# Unidimensional
+
+From [@zieglerTestingUnidimensionalityItems2015]
+
+>According to thisprinciple, a set of items is seen as unidimensional if thereare no correlated residuals between the items once the var-iance due to the latent construct is controlled for.
+
+> If all items mea-sure the same processes to the same extent, they can still beconsidered unidimensional 
+
+> EFA is not really an appropriatetechnique totestunidimensionality. Rather than that EFAis a viable approach to deriving hypotheses regarding the possible number of factors underlying the item intercorrela-tions. Thus, EFA should not be sold in a paper as providingevidence regarding unidimensionality.
+
+# Cronbah's Alpha
+
+## All
+
+```{r}
+wide_survey_likert %>%
+  data.matrix() %>%
+  psych::alpha()
+```
+
+```{r}
+wide_survey_likert %>%
+  dplyr::select(-Q3.7, -Q5.1) %>%
+  data.matrix() %>%
+  psych::alpha()
+```
+
+
+## Programming Q3
+
+Q3.7. How often do you currently use Databases (SQL, Access, etc.)
+
+1. Never
+2. Less than once per year
+3. Several times per year
+4. Monthly
+5. Weekly
+6. Daily
+
+```{r}
+knitr::include_graphics(here::here("output/survey/01-self_assessment/Q3.7.png"))
+```
+
+Our users almost never work with databases.
+Causes negative correlation.
+
+
+```{r}
+wide_survey_likert %>%
+  dplyr::select(starts_with("Q3"), -Q3.7) %>%
+  data.matrix() %>%
+  psych::alpha()
+```
+
+```{r}
+knitr::include_graphics(here::here("output/survey/01-self_assessment/Q3.6.png"))
+```
+
+```{r}
+wide_survey_likert %>%
+  dplyr::select(starts_with("Q3"), -Q3.7, -Q3.6) %>%
+  data.matrix() %>%
+  alpha()
+```
+
+7.2:
+
+- I believe having access to the original, raw data is important to be able to repeat an analysis. (1)
+- I can write a small program, script, or macro to address a problem in my own work. (2)
+- I know how to search for answers to my technical questions online. (3)
+- While working on a programming project, if I got stuck, I can find ways of overcoming the problem. (4)
+- I am confident in my ability to make use of programming software to work with data. (5)
+- Using a programming language (like R or Python) can make my analyses easier to reproduce. (6)
+- Using a programming language (like R or Python) can make me more efficient at working with data. (7)
+
+```{r}
+wide_survey_likert %>%
+  dplyr::select(starts_with("Q3"), -Q3.7, -Q3.6, Q7.2_2, Q7.2_3, Q7.2_4, Q7.2_5, Q7.2_6, Q7.2_7) %>%
+  data.matrix() %>%
+  alpha()
+```
+
+## Data Cleaning and Processing Q4
+
+```{r}
+wide_survey_likert %>%
+  dplyr::select(starts_with("Q4")) %>%
+  data.matrix() %>%
+  alpha()
+```
+
+```{r}
+wide_survey_likert %>%
+  dplyr::select(Q4.3, Q4.4) %>%
+  data.matrix() %>%
+  alpha()
+```
+
+```{r}
+table(wide_survey_likert$Q4.3, wide_survey_likert$Q4.4) %>%
+  addmargins()
+```
+
+## Project and Data Management Q5
+
+```{r}
+wide_survey_likert %>%
+  dplyr::select(starts_with("Q5")) %>%
+  data.matrix() %>%
+  alpha()
+```
+
+
+Q5.1. Please rate your level of satisfaction with your current data
+management and analysis workflow 
+
+1. Very unsatisfied
+2. Unsatisfied
+3. Neutral
+4. Satisfied
+5. Very satisfied
+6. Not sure
+7. Not applicable
+8. Never thought about this
+
+```{r}
+knitr::include_graphics(here::here("output/survey/01-self_assessment/Q5.1.png"))
+```
+
+7.2:
+
+- I believe having access to the original, raw data is important to be able to repeat an analysis. (1)
+- I can write a small program, script, or macro to address a problem in my own work. (2)
+- I know how to search for answers to my technical questions online. (3)
+- While working on a programming project, if I got stuck, I can find ways of overcoming the problem. (4)
+- I am confident in my ability to make use of programming software to work with data. (5)
+- Using a programming language (like R or Python) can make my analyses easier to reproduce. (6)
+- Using a programming language (like R or Python) can make me more efficient at working with data. (7)
+
+```{r}
+wide_survey_likert %>%
+  dplyr::select(starts_with("Q5"), -Q5.1, Q7.2_1, Q7.2_6, Q7.2_7) %>%
+  data.matrix() %>%
+  alpha()
+```
+
+```{r}
+wide_survey_likert %>%
+  dplyr::select(starts_with("Q5"), -Q5.1, Q7.2_6, Q7.2_7) %>%
+  data.matrix() %>%
+  alpha()
+```
+
+## Data + Project
+
+```{r}
+wide_survey_likert %>%
+  dplyr::select(Q4.3, Q4.4, Q5.2, Q7.2_1, Q7.2_6, Q7.2_7) %>%
+  data.matrix() %>%
+  alpha()
+```
+
+```{r}
+wide_survey_likert %>%
+  dplyr::select(Q4.3, Q4.4, Q5.2, Q7.2_6, Q7.2_7) %>%
+  data.matrix() %>%
+  alpha()
+```
+
+```{r}
+wide_survey_likert %>%
+  dplyr::select(Q4.3, Q5.2, Q7.2_6, Q7.2_7) %>%
+  data.matrix() %>%
+  alpha()
+```
+
+```{r}
+wide_survey_likert %>%
+  dplyr::select(Q4.3, Q5.2, Q7.2_6, Q7.2_7, Q6.4) %>%
+  data.matrix() %>%
+  alpha()
+```
+
+
+## Statistics Q6
+
+
+```{r}
+wide_survey_likert %>%
+  dplyr::select(starts_with("Q6")) %>%
+  data.matrix() %>%
+  alpha()
+```
+
+Q6.4 Are you familiar with the term "dummy variable"? It is sometimes also called "one-hot encoding".
+
+```{r}
+knitr::include_graphics(here::here("output/survey/01-self_assessment/Q6.4.png"))
+```
+
+
+```{r}
+wide_survey_likert %>%
+  dplyr::select(starts_with("Q6"), -Q6.4) %>%
+  data.matrix() %>%
+  alpha()
+```
+
+## Likert only
+
+7.2:
+
+- I believe having access to the original, raw data is important to be able to repeat an analysis. (1)
+- I can write a small program, script, or macro to address a problem in my own work. (2)
+- I know how to search for answers to my technical questions online. (3)
+- While working on a programming project, if I got stuck, I can find ways of overcoming the problem. (4)
+- I am confident in my ability to make use of programming software to work with data. (5)
+- Using a programming language (like R or Python) can make my analyses easier to reproduce. (6)
+- Using a programming language (like R or Python) can make me more efficient at working with data. (7)
+
+```{r}
+wide_survey_likert %>%
+  dplyr::select(starts_with("Q7")) %>%
+  data.matrix() %>%
+  alpha()
+```
+
+```{r}
+wide_survey_likert %>%
+  dplyr::select(starts_with("Q7"), -Q7.2_1) %>%
+  data.matrix() %>%
+  alpha()
+```
