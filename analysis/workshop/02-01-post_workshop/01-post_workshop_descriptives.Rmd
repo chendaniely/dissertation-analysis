@@ -38,6 +38,7 @@ postworkshop %>%
   unique() %>%
   length()
 ```
+
 ```{r}
 postworkshop %>%
   dplyr::filter(stringr::str_detect(question_part, "TEXT")) %>%

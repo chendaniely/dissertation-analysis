@@ -25,6 +25,7 @@ library(stringi)
 library(knitr)
 library(kableExtra)
 library(viridis)
+library(glue)
 
 source(here("./R/plot_question_bar.R"))
 source(here("./R/likert.R"))
@@ -94,6 +95,11 @@ table(num_consented$qualify)
 num_consented <- length(num_consented$id)
 ```
 
+```{r}
+glue::glue("Number of consented reponses: {num_consented}")
+```
+
+
 
 
 ```{r}
@@ -149,7 +155,13 @@ table(occupation$response, occupation$group)
 
 ```{r}
 total_occupation_counts <- occupation$n %>% sum()
+total_occupation_counts
 ```
+
+```{r}
+occupation %>% group_by(group) %>% summarize(ct = sum(n))
+```
+
 
 
 ```{r}

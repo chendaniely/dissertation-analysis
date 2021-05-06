@@ -5,6 +5,7 @@ library(tidyr)
 library(corrplot)
 library(forcats)
 library(broom)
+library(ggplot2)
 
 preworkshop <- readr::read_tsv(here("./data/final/01-surveys/02-pre_workshop_with_questions.tsv"))
 postworkshop <- readr::read_tsv(here("./data/final/01-surveys/03-post_workshop_with_questions.tsv"))
@@ -75,7 +76,8 @@ df <- df %>%
 # drop ids
 # 56 is the only paired observation
 # 56 has 1 missing value
-drop <- c(29, 60, 56, 57)
+# rest are missing
+drop <- c(29, 60, 56, 57, 28, 19, 69, 72, 68)
 
 df <- df %>%
   dplyr::filter(!id %in% drop)
@@ -90,10 +92,12 @@ readr::write_csv(responses, here("./data/final/01-surveys/likert_analysis.tsv"))
 
 png(here("./output/survey/03-post_workshop/pre-post-correlation.png"),
     width = 800, height = 800, units = "px")
+
 responses %>%
   dplyr::select(`Original data`:last_col()) %>%
-  cor() %>%
+  cor(use = "na.or.complete") %>%
   corrplot(method="number")
+
 dev.off()
 
 responses %>%
@@ -139,19 +143,29 @@ purrr::map_df(stat_df, ~ tidy(wilcox.test(pre_post, ., paired = FALSE, alternati
   dplyr::mutate(short_question = names(stat_df)) %>%
   dplyr::select(short_question, statistic, p.value)
 
-m <- purrr::map_df(stat_df[1:5, ], mean) %>% tidyr::pivot_longer(everything(), names_to = "variable", values_to = "mean")
-s <- purrr::map_df(stat_df[1:5, ], sd) %>% tidyr::pivot_longer(everything(), names_to = "variable", values_to = "sd")
+m <- purrr::map_df(stat_df[pre_post == 0, ], mean) %>% tidyr::pivot_longer(everything(), names_to = "variable", values_to = "mean")
+s <- purrr::map_df(stat_df[pre_post == 0, ], sd) %>% tidyr::pivot_longer(everything(), names_to = "variable", values_to = "sd")
 
 ms1 <- dplyr::full_join(m, s, by = "variable")
 
-m2 <- purrr::map_df(stat_df[6:10, ], mean) %>% tidyr::pivot_longer(everything(), names_to = "variable", values_to = "mean")
-s2 <- purrr::map_df(stat_df[6:10, ], sd) %>% tidyr::pivot_longer(everything(), names_to = "variable", values_to = "sd")
+m2 <- purrr::map_df(stat_df[pre_post == 1, ], mean) %>% tidyr::pivot_longer(everything(), names_to = "variable", values_to = "mean")
+s2 <- purrr::map_df(stat_df[pre_post == 1, ], sd) %>% tidyr::pivot_longer(everything(), names_to = "variable", values_to = "sd")
 
 ms2 <- dplyr::full_join(m2, s2, by = "variable")
 
-ms1
-ms2
+pre_post_mean_sd <- ms1 %>% dplyr::mutate(pre_post = "pre") %>%
+  dplyr::bind_rows(ms2 %>% dplyr::mutate(pre_post = "post"))
 
+pre_post_mean_sd %>%
+  tidyr::pivot_wider(names_from = "pre_post", values_from = c("mean", "sd"))
+
+responses_long <- responses %>%
+  tidyr::pivot_longer(c(-id, -pre_post))
+
+ggplot(responses_long, aes(x = value, color = as.factor(pre_post))) + 
+  geom_density() +
+  facet_wrap(~name) +
+  theme_minimal()
 
 
 responses[responses$pre_post == 0, "Assess spreadsheets", drop = TRUE] %>% mean()

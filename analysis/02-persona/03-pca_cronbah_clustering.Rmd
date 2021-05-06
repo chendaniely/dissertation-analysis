@@ -23,6 +23,7 @@ library(purrr)
 library(factoextra)
 library(fs)
 library(utf8)
+library(psych)
 
 source(here::here("./analysis/01-qualtrics/question_str_to_int.R"))
 
@@ -30,9 +31,10 @@ persona <- readr::read_tsv(here("./data/final/01-surveys/01-self_assessment_pers
 
 wide <- persona %>%
   dplyr::select(id, question_part, response) %>%
-  dplyr::filter(stringr::str_starts(question_part, "Q[3|4|5|6]")) %>%
+  dplyr::filter(stringr::str_starts(question_part, "Q[3|4|5|6|7]")) %>%
   dplyr::filter(!stringr::str_starts(question_part, "Q3.2")) %>% # drop "what programming language you have used in the past question
   # # fixes curly approstrphe
+  dplyr::filter(!stringr::str_starts(question_part, "Q7\\.[1|3|4]")) %>% # only keep likert questions in Q7
   # https://stackoverflow.com/questions/46814856/use-gsub-to-replace-curly-apostrophe-with-straight-apostrophe-in-r-list-of-chara
   dplyr::mutate(response = utf8::utf8_normalize(response, map_quote = TRUE)) %>%
   dplyr::mutate(response_numeric = purrr::map2_int(question_part, response, recode_responses_int)) %>%
@@ -96,7 +98,9 @@ numeric_data_scaled[1:5, 1:6]
 ```{r}
 pca_persona_scaled <- prcomp(numeric_data_scaled)
 summary(pca_persona_scaled)
+```
 
+```{r}
 saveRDS(pca_persona_scaled, file = here("./output/persona/pca_results.RDS"))
 ```
 
@@ -109,6 +113,7 @@ pca_results_df <- pca_table_mat %>%
   dplyr::mutate(component = components,
                 compont_num = stringr::str_replace(component, "PC", "") %>%
                   as.numeric())
+pca_results_df
 ```
 
 ```{r}
@@ -127,7 +132,9 @@ ggplot(pca_results_df,
        x = "Principal Component") +
   theme_minimal() +
   theme(text = element_text(size=20))
+```
 
+```{r}
 ggsave(here("./output/persona/pca_cum_prop.png"))
 ```
 
@@ -135,6 +142,65 @@ ggsave(here("./output/persona/pca_cum_prop.png"))
 Half of the components account for >90% of the variance.
 Will need to confirm these results with factor analysis,
 but this makes sense since I tried to ask the same questions in 2 ways.
+
+
+# Cronbah's Alpha
+
+Q5.1 and Q3.7 were causing negative correlations.
+Makes sense for Q5.1, since the scale is not linear.
+
+
+Q5.1. Please rate your level of satisfaction with your current data
+management and analysis workflow 
+
+1. Very unsatisfied
+2. Unsatisfied
+3. Neutral
+4. Satisfied
+5. Very satisfied
+6. Not sure
+7. Not applicable
+8. Never thought about this
+
+```{r}
+table(wide$Q5.1) %>% addmargins()
+```
+
+Not exactly sure why Q3.7 would be showing negative correlation.
+Probably because our users almost never work with databases.
+
+Q3.7. How often do you currently use Databases (SQL, Access, etc.)
+
+1. Never
+2. Less than once per year
+3. Several times per year
+4. Monthly
+5. Weekly
+6. Daily
+
+```{r}
+table(wide$Q3.7) %>% addmargins()
+```
+
+
+```{r}
+mat <- wide %>%
+  dplyr::select(-Q5.1, -Q3.7) %>%
+  data.matrix()
+
+```
+
+test for unidimensionality
+this is done by looking at the eigenvalue on the covariation matrix
+
+```{r}
+psych::alpha(mat)
+```
+
+In general. None of the items can be dropped to improve the alpha when all items are included.
+
+These results show that the survey has high internal consistency.
+
 
 # Hierarchical Clustering
 
