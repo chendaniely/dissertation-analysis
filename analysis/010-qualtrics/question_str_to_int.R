@@ -150,6 +150,21 @@ q6.4_int <- function(val){
   )
 }
 
+q7.2_x_int <- function(val){
+  valid <- c(
+    "Strongly Disagree",
+    "Disagree",
+    "Somewhat Disagree",
+    "Neither Agree nor Disagree",
+    "Somewhat Agree",
+    "Agree",
+    "Strongly Agree"
+  )
+  return(
+    generic_int(val, valid)
+  )
+}
+
 recode_responses_int <- function(qpart, response) {
   switch(
     qpart,
@@ -168,6 +183,13 @@ recode_responses_int <- function(qpart, response) {
     "Q6.1" = q6.1_int(response),
     "Q6.2" = q6.2_int(response),
     "Q6.3" = q6.3_int(response),
-    "Q6.4" = q6.4_int(response)
+    "Q6.4" = q6.4_int(response),
+    "Q7.2_1" = q7.2_x_int(response),
+    "Q7.2_2" = q7.2_x_int(response),
+    "Q7.2_3" = q7.2_x_int(response),
+    "Q7.2_4" = q7.2_x_int(response),
+    "Q7.2_5" = q7.2_x_int(response),
+    "Q7.2_6" = q7.2_x_int(response),
+    "Q7.2_7" = q7.2_x_int(response),
   )
 }

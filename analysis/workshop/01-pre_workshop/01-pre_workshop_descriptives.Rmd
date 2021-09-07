@@ -16,6 +16,7 @@ library(viridis)
 
 source(here("./R/plot_question_bar.R"))
 source(here("./R/likert.R"))
+source(here::here("./R/survey_q_multi_choice_multi_answer.R"))
 
 preworkshop <- readr::read_tsv(here("./data/final/01-surveys/02-pre_workshop_with_questions.tsv"))
 preworkshop_meta <- jsonlite::read_json(here("./data/final/01-surveys/02-pre_workshop_metadata.json"))

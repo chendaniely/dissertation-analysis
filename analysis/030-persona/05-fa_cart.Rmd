@@ -82,7 +82,9 @@ print(efa3, digits=2, cutoff=.3, sort=TRUE)
 ```{r}
 efa3 <- factanal(scaled, factors = 3, rotation = "promax")
 print(efa3, digits=2, cutoff=.3, sort=TRUE)
+```
 
+```{r}
 saveRDS(efa3, here("./data/final/persona/efa3-promax.RDS"))
 ```
 
@@ -281,4 +283,55 @@ par(xpd = model_all_q) # otherwise on some devices the text is clipped
 plot(model_all_q)
 text(model_all_q, digits = 3)
 ```
+
+# CFA
+
+Using the 3 factor EFA results:
+
+```{r}
+print(efa3, digits=2, cutoff=.3, sort=TRUE)
+```
+
+
+```{r}
+ds_model <- '
+programming =~ Q3.1 + Q3.3 + Q3.4 + Q3.5 + Q5.2
+statistics =~ Q6.1 + Q6.2 + Q6.3
+data =~ Q4.4 + Q6.4
+'
+```
+
+```{r}
+library(lavaan)
+library(semPlot)
+```
+
+```{r}
+cfa <- lavaan::cfa(ds_model, data = scaled)
+summary(cfa, standardized = TRUE)
+```
+
+```{r}
+semPlot::semPaths(cfa)
+```
+
+```{r}
+png(here::here("./output/persona/cfa.png"),
+    width = 8, height = 5, units = "in", res = 300)
+semPlot::semPaths(cfa, "std")
+dev.off()
+```
+
+## CFA Fit
+
+```{r}
+fitmeasures(cfa, fit.measures = "all")
+```
+
+```{r}
+fitmeasures(cfa, c("cfi", "tli", "rmsea", "srmr", "wrmr"))
+```
+
+This looks decent, but the rmsea is above 0.05.
+
 
