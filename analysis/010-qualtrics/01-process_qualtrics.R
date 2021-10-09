@@ -6,6 +6,7 @@ library(fs)
 library(purrr)
 library(glue)
 library(lubridate)
+library(stringr)
 
 source(here("./R/remove_identifiers.R"))
 source(here("./R/remove_invalid_rows.R"))
@@ -34,39 +35,47 @@ survey_dfs <- purrr::map(survey_ids,
                          ~ qualtRics::fetch_survey(surveyID = .,
                                                    verbose = FALSE) %>%
                            .GlobalEnv$remove_identifiers() %>%
-                           .GlobalEnv$remove_invalid_rows()
-                         )
+                           .GlobalEnv$remove_invalid_rows() %>%
+                           dplyr::mutate(id_response = 1:nrow(.)) %>% ## add an identifier for each response
+                           dplyr::select(id_response, everything())
+)
 
 # confirm Q2.2 is the ID column
 map(survey_dfs, ~ .$Q2.2)
+walk(survey_dfs, ~ .$Q2.2 %>% attr("label") %>% stringr::str_starts(pattern = "Please create a unique identifier") %>% stopifnot())
 
-survey_dfs[[1]] <- .GlobalEnv$remove_duplicate_ids(survey_dfs[[1]], id_col = "Q2.2")
-
+# comment this out for now, keep duplicate IDs and do an analysis on those people later on
+#survey_dfs[[1]] <- .GlobalEnv$remove_duplicate_ids(survey_dfs[[1]], id_col = "Q2.2")
 
 ## Recode the unique identifiers -----
 
 # check for no duplicate IDs, excluding NAs
-purrr::walk(survey_dfs, ~ stopifnot(all(!duplicated(na.omit(.$Q2.2)))))
+#purrr::walk(survey_dfs, ~ stopifnot(all(!duplicated(na.omit(.$Q2.2)))))
 
+survey_info <- survey_info %>%
+  dplyr::mutate(
+    num_responses = purrr::map_int(survey_dfs, nrow),
+    unique_reponses = purrr::map_int(survey_dfs, ~ .$Q2.2 %>% unique() %>% length())
+  )
 
-survey_info$nrow <- purrr::map_int(survey_dfs, nrow)
 print(survey_info)
 
 all_ids <- purrr::map_df(survey_dfs, dplyr::select, Q2.2)
 print(glue("Total number responses: {nrow(all_ids)}"))
 
-all_ids_unique <- unique(all_ids)
+all_ids_unique <- all_ids %>%
+  dplyr::distinct(Q2.2)
 print(glue("Unique number responses: {nrow(all_ids_unique)}"))
 
 # create unique integer IDs
 ids <- all_ids_unique %>%
-  dplyr::mutate(id = 1:nrow(all_ids_unique))
+  dplyr::mutate(id_person = 1:nrow(all_ids_unique))
 
 survey_dfs_deidentified <- purrr::map(survey_dfs,
                                       ~ dplyr::left_join(., ids, by = "Q2.2") %>%
                                         dplyr::select(-ResponseId, -Q2.2) %>%
-                                        dplyr::select(id, everything())
-                                        )
+                                        dplyr::select(id_person, id_response, everything())
+)
 
 ## Save out the survey data -----
 
