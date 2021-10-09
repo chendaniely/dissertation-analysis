@@ -5,6 +5,7 @@ library(tidyr)
 library(tibble)
 library(rvest)
 library(jsonlite)
+library(dplyr)
 
 source(here("R/strip_html.R"))
 source(here("./analysis/010-qualtrics/survey_search_names.R"))
@@ -70,6 +71,32 @@ ds4biomed_surveys_with_questions <- purrr::map2(ds4biomed_survey_dfs, ds4biomed_
                                                     )
                                                 })
 
+## Deal with dupliate IDs (see duplicate_ids.Rmd for analysis)
+
+## Persona study drop obs
+ds4biomed_surveys_with_questions[[1]] %>%
+  dplyr::filter(id_person == 41) %>%
+  dplyr::count(id_person, id_response)
+
+## TODO: this is hard coded
+dim(ds4biomed_surveys_with_questions[[1]])
+
+with_drops <- ds4biomed_surveys_with_questions[[1]] %>%
+  dplyr::filter(id_response != 58)
+
+dropped <- ds4biomed_surveys_with_questions[[1]] %>%
+  dplyr::filter(id_response == 58)
+
+dim(with_drops)
+dim(dropped)
+
+# extra 4 will come from NAs
+ds4biomed_surveys_with_questions[[1]] %>% dplyr::filter(is.na(id_response))
+4764 - 4690
+
+ds4biomed_surveys_with_questions[[1]] <- with_drops
+dim(ds4biomed_surveys_with_questions[[1]])
+
 ## Save out data -----
 
 fs::dir_create(here("./data/final/01-surveys"), recurse = TRUE)
@@ -110,6 +137,3 @@ purrr::walk2(ds4biomed_surveys_with_questions, survey_w_question_pth, readr::wri
 ds4biomed_surveys_with_questions_read <- purrr::map(survey_w_question_pth, readr::read_tsv)
 stopifnot(purrr::map_int(ds4biomed_surveys_with_questions, nrow) ==
             purrr::map_int(ds4biomed_surveys_with_questions_read, nrow))
-
-# Find and write out duplicates
-
