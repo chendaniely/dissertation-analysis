@@ -33,9 +33,12 @@ source(here("./R/likert.R"))
 metadata <- jsonlite::read_json(here("./data/final/01-surveys/01-self_assessment_persona_metadata.json"))
 persona <- readr::read_tsv(here("./data/final/01-surveys/01-self_assessment_persona_with_questions.tsv"))
 
+stopifnot(nrow(persona) == 4690)
+
 counts <- persona %>%
   dplyr::group_by(qbase, question_text) %>%
   dplyr::count(response) %>%
+  dplyr::ungroup() %>%
   tidyr::drop_na()
 ```
 
@@ -53,13 +56,15 @@ text_responses <- persona %>%
   count(response)
 
 text_responses %>%
-  print(n = 50)
+  dplyr::arrange(question_part, -n) %>%
+  print(n = Inf)
 ```
 
 ## Counts
 
 ```{r}
-num_respondents <- persona$id %>%
+# num unique responses
+num_respondents <- persona$id_person %>%
   unique() %>%
   .[!is.na(.)] %>%
   length()
@@ -69,14 +74,12 @@ num_respondents
 ```{r}
 num_consented <- persona %>%
   dplyr::filter(question_part %in% c("Q1.3", "Q1.4")) %>%
-  dplyr::select(id, question_part, response) %>%
-  dplyr::group_by(id, question_part) %>%
-  dplyr::filter(row_number() == 1) # selects only the first entry
+  dplyr::select(id_person, id_response, question_part, response) %>%
+  #dplyr::group_by(id_person, question_part) %>%
+  #dplyr::filter(row_number() == 1) %>% # selects only the first entry
+  {.}
 
-all(table(num_consented$id) == 2)
-
-num_consented %>%
-  filter(id == "29") # this was a problematic entry where individual took survey multiple attempts
+stopifnot(all(table(num_consented$id_person) == 2)) # this is also a duplicate ID check
 
 num_consented <- num_consented %>%
   tidyr::pivot_wider(names_from = question_part,
@@ -88,11 +91,12 @@ num_consented <- num_consented %>%
     )
   )
 
-stopifnot(any(duplicated(num_consented$id)) == FALSE)
+
+stopifnot(any(duplicated(num_consented$id_person)) == FALSE)
 
 table(num_consented$qualify)
 
-num_consented <- length(num_consented$id)
+num_consented <- length(num_consented$id_person)
 ```
 
 ```{r}
@@ -100,11 +104,9 @@ glue::glue("Number of consented reponses: {num_consented}")
 ```
 
 
-
-
 ```{r}
 persona %>%
-  dplyr::filter(is.na(id))
+  dplyr::filter(is.na(id_person))
 ```
 
 
@@ -117,31 +119,44 @@ occuptation_choices <- purrr::map(metadata$questions$QID2$choices,
   unlist()
 ```
 
+```{r}
+counts %>%
+  dplyr::filter(qbase == "Q2.3") %>%
+  dplyr::pull(response)
+```
+
 
 ```{r}
+researcher_group <- c("Academic", "faculty", "PhD", "PhD (Professor)", "Analyst", "Research administrator", "Research Adminstrator", "healthcare administration, PhD, MPH", "Biomedical Technician", "iTHRIV Scholar", "medical librarian", "Postdoc", "Librarian")
+
 occupation <- counts %>%
   dplyr::filter(qbase == "Q2.3") %>%
   dplyr::mutate(
     group = dplyr::case_when(
-      response %in% c("Academic", "faculty", "PhD", "PhD (Professor)", "Analyst", "Research administrator", "Research Adminstrator", "healthcare administration, PhD, MPH", "Biomedical Technician") ~ "researcher",
-      response %in% c("RN/PA", "DO/MD") ~ "clinician",
-      stringr::str_detect(response, "Student") ~ "student"
+      response %in% researcher_group ~ "researcher",
+      response %in% c("RN/PA", "DO/MD", "DVM", "PharmD") ~ "clinician",
+      response %in% c("Student (DVM)") ~ "clinical_student",
+      response %in% c("Student (Graduate)", "Student (Masters e.g., MPH)", "Student (Undergraduate)") ~ "student",
+      TRUE ~ NA_character_
+      #stringr::str_detect(response, "Student") ~ "student"
     )
   )
 ```
 
 ```{r}
 # make sure the "other" counts are equal to sum of the text responses
-occupation %>%
+num_groups_created <- occupation %>%
   dplyr::filter(!response %in% occuptation_choices) %>%
   pull(n) %>%
-  sum() %>%
-  identical(occupation %>%
+  sum()
+
+num_other_responses <- occupation %>%
               dplyr::filter(
                 response == "Other, please describe"
               ) %>%
-              pull(n)) %>%
-  stopifnot()
+              pull(n)
+
+stopifnot(num_groups_created + 1 == num_other_responses) # adding 1 because i'm not counting "other"
 ```
 
 ```{r}
@@ -150,7 +165,8 @@ occupation <- occupation %>%
 ```
 
 ```{r}
-table(occupation$response, occupation$group)
+# check the groups were all binned correctly
+table(occupation$response, occupation$group, useNA = "always") %>% addmargins()
 ```
 
 ```{r}
@@ -162,6 +178,9 @@ total_occupation_counts
 occupation %>% group_by(group) %>% summarize(ct = sum(n))
 ```
 
+```{r}
+fs::dir_create(here("./output", "survey", "01-self_assessment"), recurse = TRUE)
+```
 
 
 ```{r}
@@ -171,23 +190,20 @@ ggplot(data = occupation, aes(x = group, y = n)) +
   coord_flip() +
   labs(title = "Occupation Counts",
        subtitle = glue::glue("n = {num_consented}, responses={total_occupation_counts}")) +
-    theme(text = element_text(size=20),
-          axis.title.x = element_blank(),
-          axis.title.y = element_blank())
+  theme(text = element_text(size=20),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank())
+
 ggsave(here::here("./output", "survey", "01-self_assessment", "grouped_demographics.png"),
        width = 5, height = 3, units = "in")
 ```
 
-
-
 # Question Bar Graphs
 
 ```{r, fig.width=8, fig.height=5}
-fs::dir_create(here("./output", "survey", "01-self_assessment"), recurse = TRUE)
-
 for (q in unique(counts$qbase)) {
-  print(q)
-  if (q %in% c("Q7.2", "Q7.3", "Q7.4")) {next}
+  #print(q)
+  if (q %in% c("Q7.2", "Q7.3", "Q7.4")) {next} # skip the likert and free-response questions for later
 
   g <- plot_question_bar(dplyr::filter(counts, qbase == q))
   pth <- here("./output", "survey", "01-self_assessment", glue::glue("{q}.png"))
@@ -229,7 +245,7 @@ ggsave(filename = here("./output", "survey", "01-self_assessment", "likert.png")
 ```{r}
 persona %>%
   dplyr::filter(qbase == "Q7.3" | qbase == "Q7.4") %>%
-  dplyr::select(id, qbase, response) %>%
+  dplyr::select(id_person, qbase, response) %>%
   tidyr::pivot_wider(names_from = qbase, values_from = response) %>%
   dplyr::filter(! (is.na(Q7.3) & is.na(Q7.4))) %>%
   knitr::kable() %>%

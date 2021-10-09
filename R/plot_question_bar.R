@@ -1,9 +1,20 @@
-plot_question_bar <- function(dat) {
+library(rlang)
+
+plot_question_bar <- function(dat, fill_var = NULL) {
+  if (is.null(fill_var)) {
+    ex <- NULL
+  } else {
+    ex <- rlang::parse_expr(fill_var)
+  }
+  
   ggplot(data = dat,
          aes(x = stringr::str_wrap(response, 60),
-             y = n)
+             y = n,
+             fill = !!ex
+             )
   ) +
-    geom_bar(stat = "identity") +
+    geom_bar(stat = "identity",
+             position="dodge") +
     xlab("") +
     ylab("Count") +
     #labels(line_break(dat$response)) +
