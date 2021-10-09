@@ -25,7 +25,7 @@ likert_calculation <- function(data, metadata, qbase, meta_qid, grp_var = NULL) 
       dplyr::mutate(part = rownames(.)) %>%
       dplyr::mutate(question_part = paste0(qbase, "_", part)) %>%
       dplyr::full_join(likert, by = c("question_part")) %>%
-      dplyr::select(id, {{grp_var}}, qbase, qid, text, response)
+      dplyr::select(id_person, {{grp_var}}, qbase, qid, text, response)
     
     likert_q_count <- likert_questions %>%
       dplyr::group_by(!!sym(gp_col), text) %>%
@@ -40,7 +40,7 @@ likert_calculation <- function(data, metadata, qbase, meta_qid, grp_var = NULL) 
       dplyr::mutate(part = rownames(.)) %>%
       dplyr::mutate(question_part = paste0(qbase, "_", part)) %>%
       dplyr::full_join(likert, by = c("question_part")) %>%
-      dplyr::select(id, qbase, qid, text, response)
+      dplyr::select(id_person, qbase, qid, text, response)
     
     likert_q_count <- likert_questions %>%
       dplyr::group_by(text) %>%
