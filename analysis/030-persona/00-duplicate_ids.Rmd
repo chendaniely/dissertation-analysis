@@ -1,0 +1,101 @@
+---
+title: "Persona: Duplicate IDs"
+output: 
+  html_document: 
+    toc: yes
+    number_sections: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(readr)
+library(here)
+library(magrittr)
+library(dplyr)
+
+persona <- readr::read_tsv(here("./data/final/01-surveys/01-self_assessment_persona_with_questions.tsv"))
+```
+
+## Duplicate Person IDs
+
+```{r}
+persona %>%
+  dplyr::count(id_person) %>%
+  dplyr::arrange(-n)
+```
+
+
+```{r}
+dup_id_person <- persona %>%
+  dplyr::count(id_person) %>%
+  dplyr::arrange(-n) %>%
+  dplyr::filter(n > 70) %>% # each person has 70 responses, so people with multiple IDs will have more than 70
+  dplyr::pull(id_person)
+dup_id_person
+```
+
+```{r}
+# assuming that only 1 person in the persona survey has the same id_person value
+stopifnot(length(dup_id_person) == 1)
+```
+
+
+```{r}
+persona_dups <- persona %>%
+  dplyr::filter(id_person %in% dup_id_person)
+```
+
+```{r}
+persona_41_41 <- persona %>%
+  dplyr::filter(id_person == 41, id_response == 41) %>%
+  dplyr::select(id_person, id_response, question_part, response, question_text)
+```
+
+
+```{r}
+# the question part is unique per response
+stopifnot(persona_41_41$question_part %>% duplicated() %>% any() == FALSE)
+```
+
+```{r}
+persona_41_58 <- persona %>%
+  dplyr::filter(id_person == 41, id_response == 58) %>%
+  dplyr::select(id_person, id_response, question_part, response)
+
+stopifnot(persona_41_58$question_part %>% duplicated() %>% any() == FALSE)
+```
+
+```{r}
+persona_41_41_58 <- dplyr::inner_join(persona_41_41, persona_41_58,
+                                      by = c("id_person", "question_part"),
+                                      suffix = c("-41_41", "-41_58")
+)
+```
+
+```{r}
+stopifnot(nrow(persona_41_41_58) == 70)
+```
+
+
+```{r}
+persona_41_41_58 <- persona_41_41_58 %>%
+  dplyr::mutate(
+    is_response_same = `response-41_41` == `response-41_58`
+  )
+```
+
+```{r}
+comparison_diff <- persona_41_41_58 %>%
+  dplyr::filter(is_response_same == FALSE) %>%
+  dplyr::select(question_part, starts_with("response-"), question_text)
+```
+
+```{r}
+comparison_same <- persona_41_41_58 %>%
+  dplyr::filter(is_response_same == TRUE) %>%
+  dplyr::select(question_part, starts_with("response-"), question_text)
+```
+
