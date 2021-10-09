@@ -24,10 +24,15 @@ library(tidyr)
 library(factoextra)
 library(fs)
 
+# this file comes from validation 010-prep_survey_questions.R
 wide <- readr::read_csv(here::here("./data/final/persona/01-participant_numeric-wide_survey_only.csv"))
 
+stopifnot(nrow(wide) == 59)
+
+persona <- readr::read_tsv(here("./data/final/01-surveys/01-self_assessment_persona_with_questions.tsv"))
+
 # make sure the row names are the same as the IDs before dropping
-wide <- tibble::column_to_rownames(wide, var = "id")
+wide <- tibble::column_to_rownames(wide, var = "id_person")
 stopifnot(all(rownames(wide) == wide$id))
 
 rownames(wide)
@@ -87,7 +92,7 @@ pca_table_mat <- t(summary(pca_persona_scaled)$importance)
 components <- rownames(pca_table_mat)
 
 pca_results_df <- pca_table_mat %>%
-  tibble::as_data_frame() %>%
+  tibble::as_tibble() %>%
   dplyr::mutate(component = components,
                 compont_num = stringr::str_replace(component, "PC", "") %>%
                   as.numeric())
@@ -270,67 +275,33 @@ Will need to look at the results to see if they create meaningful personas
 
 # Write out group data
 
-```{r, include=FALSE}
-group_data <- numeric_data %>%
-  tibble::rownames_to_column(var = "id") %>%
-  dplyr::select(id, group2)
+```{r}
+gps <- 2:5
 
-stopifnot(nrow(numeric_data_scaled) == nrow(group_data))
-stopifnot(all(unique(group_data$id) %in% unique(persona$id)))
+persona_df_pths <- here(glue::glue("./data/final/persona/persona_group_{gps}.tsv"))
+cols <- glue::glue("group{gps}")
 
-persona2 <- persona %>%
-  dplyr::mutate(id = as.character(id)) %>%
-  dplyr::left_join(group_data, by = c("id" = "id"))
+persona_groups <- purrr::map(
+  cols,
+  function(x) {
+    group_data <- numeric_data %>%
+      tibble::rownames_to_column(var = "id_person") %>%
+      dplyr::select(id_person, {{ x }})
+    
+    stopifnot(nrow(numeric_data_scaled) == nrow(group_data))
+    stopifnot(all(unique(group_data$id_person) %in% unique(persona$id_person)))
+    
+    dat <- persona %>%
+      dplyr::mutate(id_person = as.character(id_person)) %>%
+      dplyr::left_join(group_data, by = c("id_person" = "id_person"))
+    
+    return(dat)
+  }
+)
 
-fs::dir_create(here("./data", "final", "persona"), recurse = TRUE)
-readr::write_tsv(persona2, here("./data/final/persona/persona_group_2.tsv"))
-```
-
-```{r, include=FALSE}
-group_data <- numeric_data %>%
-  tibble::rownames_to_column(var = "id") %>%
-  dplyr::select(id, group3)
-
-stopifnot(nrow(numeric_data_scaled) == nrow(group_data))
-stopifnot(all(unique(group_data$id) %in% unique(persona$id)))
-
-persona3 <- persona %>%
-  dplyr::mutate(id = as.character(id)) %>%
-  dplyr::left_join(group_data, by = c("id" = "id"))
-
-fs::dir_create(here("./data", "final", "persona"), recurse = TRUE)
-readr::write_tsv(persona3, here("./data/final/persona/persona_group_3.tsv"))
-```
-
-```{r, include=FALSE}
-group_data <- numeric_data %>%
-  tibble::rownames_to_column(var = "id") %>%
-  dplyr::select(id, group4)
-
-stopifnot(nrow(numeric_data_scaled) == nrow(group_data))
-stopifnot(all(unique(group_data$id) %in% unique(persona$id)))
-
-persona4 <- persona %>%
-  dplyr::mutate(id = as.character(id)) %>%
-  dplyr::left_join(group_data, by = c("id" = "id"))
-
-fs::dir_create(here("./data", "final", "persona"), recurse = TRUE)
-readr::write_tsv(persona4, here("./data/final/persona/persona_group_4.tsv"))
-```
-
-
-```{r, include=FALSE}
-group_data <- numeric_data %>%
-  tibble::rownames_to_column(var = "id") %>%
-  dplyr::select(id, group5)
-
-stopifnot(nrow(numeric_data_scaled) == nrow(group_data))
-stopifnot(all(unique(group_data$id) %in% unique(persona$id)))
-
-persona5 <- persona %>%
-  dplyr::mutate(id = as.character(id)) %>%
-  dplyr::left_join(group_data, by = c("id" = "id"))
-
-fs::dir_create(here("./data", "final", "persona"), recurse = TRUE)
-readr::write_tsv(persona5, here("./data/final/persona/persona_group_5.tsv"))
+purrr::walk2(
+  persona_groups,
+  persona_df_pths,
+  function(dat, pth){readr::write_tsv(dat, pth)}
+)
 ```
