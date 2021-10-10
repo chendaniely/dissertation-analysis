@@ -6,7 +6,7 @@ output:
 editor_options: 
   chunk_output_type: console
 params:
-  num_clusters: 4
+  num_clusters: 3
 ---
 
 ```{r setup, include=FALSE}
@@ -24,8 +24,11 @@ library(kableExtra)
 
 source(here("./R/plot_question_bar.R"))
 source(here("./R/likert.R"))
+source(here("./R/recode_occupation.R"))
 
-fs::dir_create(here("./output", "persona", glue::glue("group_descriptives_{params$num_clusters}")), recurse = TRUE)
+# params <- list(); params$num_clusters <- 4
+
+fs::dir_create(here("./output", "persona", glue::glue("group_descriptives_{params$num_clusters}")), recurse = TRUE) 
 
 
 # generated from clustering.Rmd
@@ -34,6 +37,7 @@ metadata <- jsonlite::read_json(here("./data/final/01-surveys/01-self_assessment
 
 gp_col <- glue::glue("group{params$num_clusters}")
 
+# i'm using !!sym because we're not in a function
 counts <- persona %>%
   dplyr::group_by((!!sym(gp_col)), qbase, question_text) %>%
   dplyr::count(response) %>%
@@ -47,13 +51,40 @@ knitr::include_graphics(here::here(glue::glue(
 )))
 ```
 
+Missing groups come from data used for validation keeping complete cases.
 
 ```{r}
 persona %>%
   dplyr::filter(qbase == "Q1.3") %>%
-  dplyr::group_by((!!sym(gp_col))) %>%
-  summarize(n = n())
+  dplyr::count( (!!sym(gp_col)) )
 ```
+
+```{r}
+occupation_cluster <- persona %>%
+  dplyr::filter(qbase == "Q2.3") %>%
+  dplyr::select(id_person, id_response, question_part, response, qbase, qid, (!!sym(gp_col))) %>%
+  .GlobalEnv$recode_occupation(response) %>%
+  tidyr::drop_na()
+```
+
+```{r}
+g <- ggplot(occupation_cluster, aes(x = occupation_group,
+                               fill = as.factor((!!sym(gp_col))) )) +
+  geom_bar(position = "dodge") +
+  scale_fill_discrete(name = "Cluster") +
+  coord_flip() +
+  theme_minimal()
+g
+```
+
+```{r}
+pth <- here("./output",
+              "persona",
+              glue::glue("group_descriptives_{params$num_clusters}"),
+              glue::glue("group_cluster_occupation.png"))
+ggsave(filename = pth, plot = g, width = 8, height = 5, units = "in")
+```
+
 
 # Question Bar Graphs
 
@@ -67,14 +98,17 @@ COLORS <- brewer.pal(8, "Dark2")[c(1:4, 6)]
 ```{r}
 for (q in unique(counts$qbase)) {
   print(q)
+  #browser()
   if (q %in% c("Q7.2", "Q7.3", "Q7.4")) {next}
 
-  g <- plot_question_bar(dplyr::filter(counts, qbase == q))
-  pth <- here("./output", "persona", glue::glue("group_descriptives_{params$num_clusters}"), glue::glue("{q}.png"))
-  #print(pth)
+  g <- plot_question_bar(dplyr::filter(counts, qbase == q), fill_var = gp_col)
+  pth <- here("./output",
+              "persona",
+              glue::glue("group_descriptives_{params$num_clusters}"),
+              glue::glue("{q}.png"))
+  print(pth)
   print(g)
   ggsave(filename = pth, plot = g, width = 8, height = 5, units = "in")
-  #break
 }
 ```
 
@@ -159,10 +193,10 @@ ggsave(filename = here("./output",
 ```{r}
 reponse_table <- persona %>%
   dplyr::filter(qbase == "Q7.3" | qbase == "Q7.4") %>%
-  dplyr::select((!!sym(gp_col)), id, qbase, response) %>%
+  dplyr::select((!!sym(gp_col)), id_person, qbase, response) %>%
   tidyr::pivot_wider(names_from = qbase, values_from = response) %>%
   dplyr::filter(! (is.na(Q7.3) & is.na(Q7.4))) %>%
-  dplyr::arrange((!!sym(gp_col)), id)
+  dplyr::arrange((!!sym(gp_col)), id_person)
 
 reponse_table %>%
   knitr::kable() %>%
