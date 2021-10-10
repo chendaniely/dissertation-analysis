@@ -10,11 +10,12 @@ plot_question_bar <- function(dat, fill_var = NULL) {
   ggplot(data = dat,
          aes(x = stringr::str_wrap(response, 60),
              y = n,
-             fill = !!ex
+             fill = as.factor(!!ex)
              )
   ) +
     geom_bar(stat = "identity",
              position="dodge") +
+    scale_fill_discrete(name = "Group") +
     xlab("") +
     ylab("Count") +
     #labels(line_break(dat$response)) +
