@@ -29,6 +29,7 @@ library(glue)
 
 source(here("./R/plot_question_bar.R"))
 source(here("./R/likert.R"))
+source(here("./R/recode_occupation.R"))
 
 metadata <- jsonlite::read_json(here("./data/final/01-surveys/01-self_assessment_persona_metadata.json"))
 persona <- readr::read_tsv(here("./data/final/01-surveys/01-self_assessment_persona_with_questions.tsv"))
@@ -125,22 +126,10 @@ counts %>%
   dplyr::pull(response)
 ```
 
-
 ```{r}
-researcher_group <- c("Academic", "faculty", "PhD", "PhD (Professor)", "Analyst", "Research administrator", "Research Adminstrator", "healthcare administration, PhD, MPH", "Biomedical Technician", "iTHRIV Scholar", "medical librarian", "Postdoc", "Librarian")
-
 occupation <- counts %>%
   dplyr::filter(qbase == "Q2.3") %>%
-  dplyr::mutate(
-    group = dplyr::case_when(
-      response %in% researcher_group ~ "researcher",
-      response %in% c("RN/PA", "DO/MD", "DVM", "PharmD") ~ "clinician",
-      response %in% c("Student (DVM)") ~ "clinical_student",
-      response %in% c("Student (Graduate)", "Student (Masters e.g., MPH)", "Student (Undergraduate)") ~ "student",
-      TRUE ~ NA_character_
-      #stringr::str_detect(response, "Student") ~ "student"
-    )
-  )
+  recode_occupation(response)
 ```
 
 ```{r}
@@ -166,7 +155,7 @@ occupation <- occupation %>%
 
 ```{r}
 # check the groups were all binned correctly
-table(occupation$response, occupation$group, useNA = "always") %>% addmargins()
+table(occupation$response, occupation$occupation_group, useNA = "always") %>% addmargins()
 ```
 
 ```{r}
@@ -175,7 +164,7 @@ total_occupation_counts
 ```
 
 ```{r}
-occupation %>% group_by(group) %>% summarize(ct = sum(n))
+occupation %>% group_by(occupation_group) %>% summarize(ct = sum(n))
 ```
 
 ```{r}
@@ -184,7 +173,7 @@ fs::dir_create(here("./output", "survey", "01-self_assessment"), recurse = TRUE)
 
 
 ```{r}
-ggplot(data = occupation, aes(x = group, y = n)) +
+ggplot(data = occupation, aes(x = occupation_group, y = n)) +
   geom_bar(stat = "identity") +
   theme_minimal() +
   coord_flip() +
