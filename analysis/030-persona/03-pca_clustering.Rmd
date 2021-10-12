@@ -8,6 +8,8 @@ output:
     fig_height: 5
 editor_options: 
   chunk_output_type: console
+params:
+  survey_data: "survey_likert"
 ---
 
 ```{r setup, include=FALSE}
@@ -23,11 +25,31 @@ library(purrr)
 library(tidyr)
 library(factoextra)
 library(fs)
+library(glue)
+library(ggdendro)
+library(ggplot2)
+
+source(here::here("./R/gg_plot_dendro.R"))
+
+# params <- list(); params$survey_data <- "survey_likert"
+stopifnot(
+  params$survey_data %in% c("survey_likert", "survey_only", "likert_only")
+)
+
+fs::dir_create(here(glue::glue("./output/persona/{params$survey_data}")))
+
+survey_data_pth <- switch(
+  params$survey_data,
+  "survey_likert" = here::here("./data/final/persona/01-participant_numeric-wide_survey_likert.csv"),
+  "survey_only" = here::here("./data/final/persona/01-participant_numeric-wide_survey_only.csv"),
+  "likert_only" = here::here("./data/final/persona/01-participant_numeric-wide_likert_only.csv")
+)
+
 
 # this file comes from validation 010-prep_survey_questions.R
-wide <- readr::read_csv(here::here("./data/final/persona/01-participant_numeric-wide_survey_only.csv"))
+wide <- readr::read_csv(survey_data_pth)
 
-stopifnot(nrow(wide) == 59)
+#stopifnot(nrow(wide) == 59)
 
 persona <- readr::read_tsv(here("./data/final/01-surveys/01-self_assessment_persona_with_questions.tsv"))
 
@@ -84,7 +106,7 @@ summary(pca_persona_scaled)
 ```
 
 ```{r}
-saveRDS(pca_persona_scaled, file = here("./output/persona/pca_results.RDS"))
+saveRDS(pca_persona_scaled, file = here(glue::glue("./output/persona/{params$survey_data}/pca_results.RDS")))
 ```
 
 ```{r}
@@ -118,7 +140,7 @@ ggplot(pca_results_df,
 ```
 
 ```{r}
-ggsave(here("./output/persona/pca_cum_prop.png"))
+ggsave(here(glue::glue("./output/persona/{params$survey_data}/pca_cum_prop.png")))
 ```
 
 
@@ -256,7 +278,7 @@ dev.off()
 https://uc-r.github.io/kmeans_clustering#elbow
 
 ```{r}
-png(here("./output/persona/elbow_plot.png"))
+png(here(glue::glue("./output/persona/{params$survey_data}/elbow_plot.png")))
 factoextra::fviz_nbclust(numeric_data_scaled, FUN = factoextra::hcut, method = "wss")
 dev.off()
 ```
@@ -264,7 +286,7 @@ dev.off()
 #### Gap statistic
 
 ```{r}
-png(here("./output/persona/gap_statistic.png"))
+png(here(glue::glue("./output/persona/{params$survey_data}/gap_statistic.png")))
 gap_stat <- clusGap(numeric_data_scaled, FUN = kmeans, nstart = 30, K.max = 24, B = 50)
 fviz_gap_stat(gap_stat) + theme_minimal() + ggtitle("fviz_gap_stat: Gap Statistic")
 dev.off()
@@ -278,7 +300,8 @@ Will need to look at the results to see if they create meaningful personas
 ```{r}
 gps <- 2:5
 
-persona_df_pths <- here(glue::glue("./data/final/persona/persona_group_{gps}.tsv"))
+fs::dir_create(here(glue::glue("./data/final/persona/{params$survey_data}/")))
+persona_df_pths <- here(glue::glue("./data/final/persona/{params$survey_data}/persona_group_{gps}.tsv"))
 cols <- glue::glue("group{gps}")
 
 persona_groups <- purrr::map(

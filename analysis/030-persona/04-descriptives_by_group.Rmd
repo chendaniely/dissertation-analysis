@@ -7,6 +7,7 @@ editor_options:
   chunk_output_type: console
 params:
   num_clusters: 3
+  survey_data: "survey_likert"
 ---
 
 ```{r setup, include=FALSE}
@@ -26,13 +27,16 @@ source(here("./R/plot_question_bar.R"))
 source(here("./R/likert.R"))
 source(here("./R/recode_occupation.R"))
 
-# params <- list(); params$num_clusters <- 4
+# params <- list(); params$num_clusters <- 4; params$survey_data <- "survey_likert"
 
-fs::dir_create(here("./output", "persona", glue::glue("group_descriptives_{params$num_clusters}")), recurse = TRUE) 
+print(params)
 
+fs::dir_create(here("./output", "persona",
+                    glue::glue("{params$survey_data}"),
+                    glue::glue("group_descriptives_{params$num_clusters}")), recurse = TRUE)
 
 # generated from clustering.Rmd
-persona <- readr::read_tsv(here(glue::glue("./data/final/persona/persona_group_{params$num_clusters}.tsv")))
+persona <- readr::read_tsv(here(glue::glue("./data/final/persona/{params$survey_data}/persona_group_{params$num_clusters}.tsv")))
 metadata <- jsonlite::read_json(here("./data/final/01-surveys/01-self_assessment_persona_metadata.json"))
 
 gp_col <- glue::glue("group{params$num_clusters}")
@@ -47,7 +51,13 @@ counts <- persona %>%
 
 ```{r}
 knitr::include_graphics(here::here(glue::glue(
-  "./output/persona/dendogram_{params$num_clusters}.png"
+  "./output/persona/{params$survey_data}/dendogram_{params$num_clusters}.png"
+)))
+```
+
+```{r}
+knitr::include_graphics(here::here(glue::glue(
+  "./output/persona/{params$survey_data}/dendogram_{params$num_clusters}_gg.png"
 )))
 ```
 
@@ -79,9 +89,10 @@ g
 
 ```{r}
 pth <- here("./output",
-              "persona",
-              glue::glue("group_descriptives_{params$num_clusters}"),
-              glue::glue("group_cluster_occupation.png"))
+            "persona",
+            glue::glue("{params$survey_data}"),
+            glue::glue("group_descriptives_{params$num_clusters}"),
+            glue::glue("group_cluster_occupation.png"))
 ggsave(filename = pth, plot = g, width = 8, height = 5, units = "in")
 ```
 
@@ -104,6 +115,7 @@ for (q in unique(counts$qbase)) {
   g <- plot_question_bar(dplyr::filter(counts, qbase == q), fill_var = gp_col)
   pth <- here("./output",
               "persona",
+              glue::glue("{params$survey_data}"),
               glue::glue("group_descriptives_{params$num_clusters}"),
               glue::glue("{q}.png"))
   print(pth)
@@ -127,6 +139,7 @@ g
 ```{r}
 ggsave(filename = here("./output",
                        "persona",
+                       glue::glue("{params$survey_data}"),
                        glue::glue("group_descriptives_{params$num_clusters}"),
                        "likert.png"),
        plot = g,
@@ -151,6 +164,7 @@ g
 ```{r}
 ggsave(filename = here("./output",
                        "persona",
+                       glue::glue("{params$survey_data}"),
                        glue::glue("group_descriptives_{params$num_clusters}"),
                        "likert_prop.png"),
        plot = g,
@@ -173,6 +187,7 @@ poster
 ```{r}
 ggsave(filename = here("./output",
                        "persona",
+                       glue::glue("{params$survey_data}"),
                        glue::glue("group_descriptives_{params$num_clusters}"),
                        "likert_prop_poster.png"),
        plot = poster,
