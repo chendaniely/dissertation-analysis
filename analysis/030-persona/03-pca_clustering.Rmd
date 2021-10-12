@@ -326,3 +326,41 @@ purrr::walk2(
   function(dat, pth){readr::write_tsv(dat, pth)}
 )
 ```
+
+# K-Means
+
+https://uc-r.github.io/kmeans_clustering
+
+```{r}
+numeric_data_scaled
+```
+
+```{r}
+library(tidyverse)  # data manipulation
+library(cluster)    # clustering algorithms
+library(factoextra) # clustering algorithms & visualization
+```
+
+```{r}
+dist <- factoextra::get_dist(numeric_data_scaled, method = "euclidean")
+```
+
+```{r}
+fviz_dist(dist, gradient = list(low = "#00AFBB", mid = "white", high = "#FC4E07"))
+```
+
+```{r}
+k2 <- kmeans(numeric_data_scaled, centers = 2, nstart = 25)
+k3 <- kmeans(numeric_data_scaled, centers = 3, nstart = 25)
+k4 <- kmeans(numeric_data_scaled, centers = 4, nstart = 25)
+k5 <- kmeans(numeric_data_scaled, centers = 5, nstart = 25)
+
+# plots to compare
+pk2 <- fviz_cluster(k2, geom = "point", data = numeric_data_scaled) + ggtitle("k = 2")
+pk3 <- fviz_cluster(k3, geom = "point", data = numeric_data_scaled) + ggtitle("k = 3")
+pk4 <- fviz_cluster(k4, geom = "point", data = numeric_data_scaled) + ggtitle("k = 4")
+pk5 <- fviz_cluster(k5, geom = "point", data = numeric_data_scaled) + ggtitle("k = 5")
+
+library(gridExtra)
+grid.arrange(pk2, pk3, pk4, pk5, nrow = 2)
+```
