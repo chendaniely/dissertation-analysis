@@ -228,40 +228,38 @@ numeric_data <- numeric_data %>%
 rownames(numeric_data) <- rownames(wide)
 ```
 
-```{r}
-png(here::here("./output/persona/dendogram_2.png"), width = 13, height = 8, units = "in", res = 72)
-plot(hc_ward, cex = 0.6)
-rect.hclust(hc_ward, k = 2, border = 2:3)
-dev.off()
-```
-
 
 ```{r}
-png(here::here("./output/persona/dendogram_3.png"), width = 13, height = 8, units = "in", res = 72)
-plot(hc_ward, cex = 0.6)
-rect.hclust(hc_ward, k = 3, border = 2:4)
-dev.off()
-```
-
-```{r}
-png(here::here("./output/persona/dendogram_4.png"), width = 13, height = 8, units = "in", res = 72)
-plot(hc_ward, cex = 0.6)
-rect.hclust(hc_ward, k = 4, border = 2:5)
-dev.off()
+plot_all_dendros <- function(hc_dat, k, ...) {
+  png(here::here(glue::glue("./output/persona/{params$survey_data}/dendogram_{k}.png")),
+      width = 13, height = 8, units = "in", res = 72)
+  plot(hc_ward, cex = 0.6)
+  rect.hclust(hc_ward, k = k, border = 2:3)
+  dev.off()
+  
+  g <- gg_plot_dendro(hc_ward, ...)
+  print(g)
+  
+  ggsave(here::here(glue::glue("./output/persona/{params$survey_data}/dendogram_{k}_gg.png")),
+         plot = g,
+         width = 13, height = 8, units = "in", dpi = 72)
+}
 ```
 
 ```{r}
-png(here::here("./output/persona/dendogram_5.png"), width = 13, height = 8, units = "in", res = 72)
-plot(hc_ward, cex = 0.6)
-rect.hclust(hc_ward, k = 5, border = 2:6)
-dev.off()
+plot_all_dendros(hc_ward, k = 2, group2)
 ```
 
 ```{r}
-png(here::here("./output/persona/dendogram_6.png"), width = 13, height = 8, units = "in", res = 72)
-plot(hc_ward, cex = 0.6)
-rect.hclust(hc_ward, k = 6, border = 2:7)
-dev.off()
+plot_all_dendros(hc_ward, k = 3, group3)
+```
+
+```{r}
+plot_all_dendros(hc_ward, k = 4, group4)
+```
+
+```{r}
+plot_all_dendros(hc_ward, k = 5, group5)
 ```
 
 ### Finding optimal clusters
