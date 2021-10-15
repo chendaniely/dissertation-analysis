@@ -20,7 +20,7 @@ persona <- readr::read_tsv(here("./data/final/01-surveys/01-self_assessment_pers
 xtab <- persona %>%
   dplyr::select(-qid) %>%
   dplyr::filter(qbase == "Q3.6" | qbase == "Q3.2") %>%
-  dplyr::select(id, question_part, response) %>%
+  dplyr::select(id_person, question_part, response) %>%
   tidyr::pivot_wider(names_from = "question_part", values_from = "response") %>%
   tidyr::pivot_longer(starts_with("Q3.2_"))
 ```
