@@ -11,13 +11,14 @@ library(tibble)
 library(psych)
 library(here)
 library(dplyr)
+library(GPArotation)
+library(progress)
 
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
 numeric <- readr::read_csv(here::here("./data/final/persona/01-participant_numeric-wide_survey_likert.csv"))
-
 questions <- readr::read_tsv(here("./data/final/01-surveys/01-self_assessment_persona_questions_meta.tsv"))
 
 numeric <- tibble::column_to_rownames(numeric, var = "id_person")
@@ -49,6 +50,135 @@ if (interactive()) {
 
 ```
 
+## Loadings
+
+```{r}
+my_efa <- function(scaled_dat, nfactors, rotation, factor_method) {
+  #print("*********************************************************************")
+  #print(glue::glue("nfactors: {nfactors}\nroation: {rotation}\nfactor_method: {factor_method}"))
+  pb$tick()
+  
+  efa_res <- psych::fa(scaled_dat, nfactors = nfactors, scores = "tenBerge", fm = factor_method)
+  
+  res <- tibble::tribble(~nfactors, ~rotation, ~fm,           ~tli,        ~rmsea,             ~bic,
+                         nfactors,  rotation,  factor_method, efa_res$TLI, efa_res$RMSEA[[1]], efa_res$BIC)
+  
+  return(res)
+}
+```
+
+```{r}
+nfactors_try <- 1:5
+rotation_try <- c("none", "varimax", "quartimax", "bentlerT", "equamax", "varimin", "geominT", "bifactor", # orthogonal
+                  "Promax", "promax", "oblimin", "simplimax", "bentlerQ", "geominQ", "biquartimin", "cluster" # oblique
+                  )
+fm_try <- c("minres", "uls", "ols", "wls", "gls", "pa", "ml", "minchi", "minrank", "old.min", "alpha")
+param_grid <- expand.grid(nfactors_try = nfactors_try,
+                          rotation_try = rotation_try,
+                          fm_try = fm_try,
+                          stringsAsFactors = FALSE
+                          )
+```
+
+```{r}
+l_params <- list(nfactors = param_grid$nfactors_try,
+                 rotation = param_grid$rotation_try,
+                 factor_method = param_grid$fm_try
+                 )
+
+pb <- progress_bar$new(total = nrow(param_grid))
+
+safe_my_efa <- purrr::safely(my_efa)
+
+all_param_res <- purrr::pmap(l_params,
+                             function(nfactors, rotation, factor_method) {
+                               safe_my_efa(scaled, nfactors, rotation, factor_method)
+                             }
+)
+```
+
+```{r}
+t <- all_param_res %>%
+  purrr::transpose() %>%
+  purrr::simplify_all()
+
+all_res_df <- t$result %>%
+  dplyr::bind_rows()
+```
+
+```{r}
+good_res_combos <- all_res_df %>%
+  dplyr::filter(tli >= 0.9, rmsea < 0.08)
+```
+
+```{r}
+good_res_combos %>%
+  dplyr::count(nfactors)
+```
+
+### 2 Loadings
+
+
+```{r}
+f2 <- fa(scaled, 2, rotate="varimax", scores="tenBerge", fm = "ml")
+print(f2)
+factor.stats(scaled, f2, n.obs = nrow(scaled))
+```
+
+```{r}
+f2$loadings
+```
+
+
+
+### 3 Loadings
+
+
+```{r}
+f3 <- fa(scaled, 3, rotate="varimax", scores="tenBerge", fm = "ml")
+print(f3)
+factor.stats(scaled, f3, n.obs = nrow(scaled))
+```
+
+```{r}
+f3$loadings
+```
+
+```{r}
+f3 <- fa(scaled, 3, rotate="promax", scores="tenBerge", fm = "ml")
+print(f3)
+factor.stats(scaled, f3, n.obs = nrow(scaled))
+```
+
+```{r}
+f3$loadings
+```
+
+
+
+### 4 Loadings
+
+```{r}
+f4 <- fa(scaled, 4, rotate="varimax", scores="tenBerge", fm = "ml")
+print(f4)
+factor.stats(scaled, f4, n.obs = nrow(scaled))
+```
+
+```{r}
+f4$loadings
+```
+
+
+
+### 5 Loadings
+
+```{r}
+f5 <- fa(scaled, 5, rotate="varimax", scores="tenBerge", fm = "ml")
+print(f5)
+factor.stats(scaled, f5, n.obs = nrow(scaled))
+```
+
+
 
 ### 2 Loadings
 
@@ -65,7 +195,8 @@ saveRDS(efa2, here("./data/final/persona/efa2-promax.RDS"))
 ```
 
 ```{r}
-f2 <- fa(scaled, 2)
+f2 <- fa(scaled, 2, scores="tenBerge")
+print(f2)
 factor.stats(scaled, f2, n.obs = nrow(scaled))
 
 f2o <- fa(scaled, 2, fm="pa", rotate="Promax")
