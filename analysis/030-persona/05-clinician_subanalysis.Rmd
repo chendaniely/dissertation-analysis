@@ -1,5 +1,5 @@
 ---
-title: "Descriptives by Group"
+title: "Clinician Sub-Analysis"
 output: 
   html_document: 
     toc: yes
@@ -11,7 +11,7 @@ params:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(echo = TRUE)
 
 library(readr)
 library(here)
@@ -33,16 +33,16 @@ print(params)
 
 fs::dir_create(here("./output", "persona",
                     glue::glue("{params$survey_data}"),
-                    glue::glue("group_descriptives_{params$num_clusters}")), recurse = TRUE)
+                    glue::glue("clinician_subanalysis_{params$num_clusters}")), recurse = TRUE)
 
 # generated from clustering.Rmd
-persona <- readr::read_tsv(here(glue::glue("./data/final/persona/{params$survey_data}/persona_group_{params$num_clusters}.tsv")))
+clinician <- readr::read_tsv(here(glue::glue("./data/final/persona/{params$survey_data}/persona_clinician_group_{params$num_clusters}.tsv")))
 metadata <- jsonlite::read_json(here("./data/final/01-surveys/01-self_assessment_persona_metadata.json"))
 
 gp_col <- glue::glue("group{params$num_clusters}")
 
 # i'm using !!sym because we're not in a function
-counts <- persona %>%
+counts <- clinician %>%
   dplyr::group_by((!!sym(gp_col)), qbase, question_text) %>%
   dplyr::count(response) %>%
   tidyr::drop_na() %>%
@@ -64,60 +64,49 @@ knitr::include_graphics(here::here(glue::glue(
 Missing groups come from data used for validation keeping complete cases.
 
 ```{r}
-persona %>%
+clinician %>%
   dplyr::filter(qbase == "Q1.3") %>%
   dplyr::count( (!!sym(gp_col)) )
 ```
 
 ```{r}
-occupation_cluster <- persona %>%
-  dplyr::filter(qbase == "Q2.3") %>%
-  dplyr::select(id_person, id_response, question_part, response, qbase, qid, (!!sym(gp_col))) %>%
-  .GlobalEnv$recode_occupation(response) %>%
-  tidyr::drop_na()
+plot_occupation_group <- function(dat, gp_col = NULL) {
+  # user string; function quote
+  ex_gp_col <- rlang::parse_expr(gp_col)
+
+  occupation_cluster <- dat %>%
+    dplyr::filter(qbase == "Q2.3") %>%
+    dplyr::select(id_person, id_response, question_part, response, qbase, qid, !!ex_gp_col) %>%
+    .GlobalEnv$recode_occupation(response) %>%
+    tidyr::drop_na()
+  
+  g <- ggplot(occupation_cluster, aes(x = occupation_group,
+                                      fill = as.factor(!!ex_gp_col))) +
+    geom_bar(position = "dodge") +
+    scale_fill_discrete(name = "Cluster") +
+    coord_flip() +
+    theme_minimal()
+
+  return(g)
+}
 ```
 
+
 ```{r}
-g <- ggplot(occupation_cluster, aes(x = occupation_group,
-                               fill = as.factor((!!sym(gp_col))) )) +
-  geom_bar(position = "dodge") +
-  scale_fill_discrete(name = "Cluster") +
-  coord_flip() +
-  theme_minimal()
-g
+g <- plot_occupation_group(clinician, gp_col)
+print(g)
 ```
 
 ```{r}
 pth <- here("./output",
             "persona",
             glue::glue("{params$survey_data}"),
-            glue::glue("group_descriptives_{params$num_clusters}"),
-            glue::glue("group_cluster_occupation.png"))
+            glue::glue("clinician_subanalysis_{params$num_clusters}"),
+            glue::glue("group_cluster_occupation_clinician.png"))
 ggsave(filename = pth, plot = g, width = 8, height = 5, units = "in")
 ```
 
-```{r}
-# save out data just for clinical subanalysis
-clinician_id_person <- occupation_cluster %>%
-  dplyr::filter(occupation_group == "clinician") %>%
-  pull(id_person) %>%
-  unique()
-
-clinician_dat <- persona %>%
-  dplyr::filter(id_person %in% clinician_id_person)
-
-readr::write_tsv(clinician_dat,
-                 here(glue::glue("./data/final/persona/{params$survey_data}/persona_clinician_group_{params$num_clusters}.tsv")))
-```
-
 # Question Bar Graphs
-
-```{r}
-brewer.pal(8, "Dark2")
-display.brewer.pal(8, "Dark2")
-COLORS <- brewer.pal(8, "Dark2")[c(1:4, 6)]
-```
-
 
 ```{r}
 for (q in unique(counts$qbase)) {
@@ -129,7 +118,7 @@ for (q in unique(counts$qbase)) {
   pth <- here("./output",
               "persona",
               glue::glue("{params$survey_data}"),
-              glue::glue("group_descriptives_{params$num_clusters}"),
+              glue::glue("clinician_subanalysis_{params$num_clusters}"),
               glue::glue("{q}.png"))
   print(pth)
   print(g)
@@ -141,10 +130,10 @@ for (q in unique(counts$qbase)) {
 
 ```{r, fig.width=8, fig.height=5}
 qbase <- "Q7.2"
-qid <- get_qid_from_qbase(persona, qbase)
+qid <- get_qid_from_qbase(clinician, qbase)
 qid
 
-likert_q_count <- likert_calculation(persona, metadata, qbase, qid, grp_var = gp_col)
+likert_q_count <- likert_calculation(clinician, metadata, qbase, qid, grp_var = gp_col)
 g <- likert_plot(likert_q_count %>% tidyr::drop_na(), facet_1 = gp_col)
 g
 ```
@@ -153,7 +142,7 @@ g
 ggsave(filename = here("./output",
                        "persona",
                        glue::glue("{params$survey_data}"),
-                       glue::glue("group_descriptives_{params$num_clusters}"),
+                       glue::glue("clinician_subanalysis_{params$num_clusters}"),
                        "likert.png"),
        plot = g,
        width = 13,
@@ -201,7 +190,7 @@ poster
 ggsave(filename = here("./output",
                        "persona",
                        glue::glue("{params$survey_data}"),
-                       glue::glue("group_descriptives_{params$num_clusters}"),
+                       glue::glue("clinician_subanalysis_{params$num_clusters}"),
                        "likert_prop_poster.png"),
        plot = poster,
        width = 8,
@@ -219,7 +208,7 @@ ggsave(filename = here("./output",
 
 
 ```{r}
-reponse_table <- persona %>%
+reponse_table <- clinician %>%
   dplyr::filter(qbase == "Q7.3" | qbase == "Q7.4") %>%
   dplyr::select((!!sym(gp_col)), id_person, qbase, response) %>%
   tidyr::pivot_wider(names_from = qbase, values_from = response) %>%
