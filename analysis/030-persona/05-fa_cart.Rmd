@@ -16,9 +16,11 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
-numeric <- readr::read_csv(here::here("./data/final/persona/01-participant_numeric.csv"))
+numeric <- readr::read_csv(here::here("./data/final/persona/01-participant_numeric-wide_survey_likert.csv"))
 
-numeric <- tibble::column_to_rownames(numeric, var = "id")
+questions <- readr::read_tsv(here("./data/final/01-surveys/01-self_assessment_persona_questions_meta.tsv"))
+
+numeric <- tibble::column_to_rownames(numeric, var = "id_person")
 scaled <- scale(numeric)
 ```
 
@@ -37,9 +39,14 @@ ap <- parallel(subject = nrow(scaled),
 nS <- nScree(x=ev$values,
              aparallel=ap$eigen$qevpea)
 
-png(here::here("./output/persona/efa_eigen_scree.png"))
-plotnScree(nS)
-dev.off()
+if (interactive()) {
+  plotnScree(nS)
+} else {
+  png(here::here("./output/persona/efa_eigen_scree.png"))
+  plotnScree(nS)
+  dev.off()
+}
+
 ```
 
 
