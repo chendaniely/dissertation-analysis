@@ -13,9 +13,58 @@ library(here)
 library(dplyr)
 library(GPArotation)
 library(progress)
+library(flextable)
+library(xtable)
 
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
+```{r}
+# from: https://www.anthonyschmidt.co/post/2020-09-27-efa-tables-in-r/
+fa_table <- function(x, cut) {
+  #get sorted loadings
+  loadings <- fa.sort(x)$loadings %>% round(3)
+  #supress loadings
+  loadings[loadings < cut] <- ""
+  #get additional info
+  add_info <- cbind(x$communalities, 
+                    x$uniquenesses,
+                    x$complexity) %>%
+    # make it a data frame
+    as.data.frame() %>%
+    # column names
+    rename("Communality" = V1,
+           "Uniqueness" = V2,
+           "Complexity" = V3) %>%
+    #get the item names from the vector
+    rownames_to_column("item")
+  #build table
+  loadings %>%
+    unclass() %>%
+    as.data.frame() %>%
+    rownames_to_column("item") %>%
+    left_join(add_info) %>%
+    mutate(across(where(is.numeric), round, 3))
+}
+
+flex <- function(data, title=NULL) {
+  # this grabs the data and converts it to a flextbale
+  flextable(data) %>%
+    # this makes the table fill the page width
+    set_table_properties(layout = "autofit", width = 1) %>%
+    # font size
+    fontsize(size=10, part="all") %>%
+      #this adds a ttitlecreates an automatic table number
+        set_caption(title, 
+                    autonum = officer::run_autonum(seq_id = "tab", 
+                                                   pre_label = "Table ", 
+                                                   post_label = "\n", 
+                                                   bkm = "anytable")) %>%
+    # font type
+    flextable::font(fontname="Times New Roman", part="all")
+}
+```
+
 
 ```{r}
 numeric <- readr::read_csv(here::here("./data/final/persona/01-participant_numeric-wide_survey_likert.csv"))
@@ -129,6 +178,22 @@ factor.stats(scaled, f2, n.obs = nrow(scaled))
 f2$loadings
 ```
 
+```{r}
+fa_table(f2, .30)
+```
+
+```{r}
+fa_table(f2, .30) %>%
+  flex("A Pretty Factor Analysis Table")
+```
+
+```{r}
+xtable::xtable(fa_table(f2, .30))
+```
+
+
+
+
 
 
 ### 3 Loadings
@@ -154,6 +219,11 @@ factor.stats(scaled, f3, n.obs = nrow(scaled))
 f3$loadings
 ```
 
+```{r}
+xtable::xtable(fa_table(f3, .30))
+```
+
+
 
 
 ### 4 Loadings
@@ -168,6 +238,10 @@ factor.stats(scaled, f4, n.obs = nrow(scaled))
 f4$loadings
 ```
 
+```{r}
+xtable::xtable(fa_table(f4, .30))
+```
+
 
 
 ### 5 Loadings
@@ -176,6 +250,10 @@ f4$loadings
 f5 <- fa(scaled, 5, rotate="varimax", scores="tenBerge", fm = "ml")
 print(f5)
 factor.stats(scaled, f5, n.obs = nrow(scaled))
+```
+
+```{r}
+xtable::xtable(fa_table(f5, .30))
 ```
 
 
