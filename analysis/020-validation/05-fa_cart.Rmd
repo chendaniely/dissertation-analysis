@@ -170,11 +170,42 @@ good_res_combos %>%
   dplyr::count(nfactors)
 ```
 
+```{r}
+fa_cutoff <- 0.30
+```
+
+### Item distributions
+
+```{r}
+apply(scaled, 2, hist)
+```
+
+https://en.wikipedia.org/wiki/Shapiro%E2%80%93Wilk_test: 
+
+The null-hypothesis of this test is that the population is normally distributed. Thus, if the p value is less than the chosen alpha level, then the null hypothesis is rejected and there is evidence that the data tested are not normally distributed
+
+```{r}
+apply(scaled, 2, shapiro.test)
+```
+
+```{r}
+library(MVN)
+res <- mvn(scaled, mvnTest = "mardia", univariatePlot = "qq")
+res
+```
+
+```{r}
+apply(scaled, 2, function(x){
+  qqnorm(x, pch = 1, frame = FALSE)
+  qqline(x, col = "steelblue", lwd = 2)
+})
+```
+
 ### 2 Loadings
 
 
 ```{r}
-f2 <- fa(scaled, 2, rotate="varimax", scores="tenBerge", fm = "ml")
+f2 <- fa(scaled, 2, rotate="varimax", scores="tenBerge", fm = "minchi")
 print(f2)
 factor.stats(scaled, f2, n.obs = nrow(scaled))
 ```
@@ -184,16 +215,16 @@ f2$loadings
 ```
 
 ```{r}
-fa_table(f2, .30)
+fa_table(f2, fa_cutoff)
 ```
 
 ```{r}
-fa_table(f2, .30) %>%
+fa_table(f2, fa_cutoff) %>%
   flex("A Pretty Factor Analysis Table")
 ```
 
 ```{r}
-xtable::xtable(fa_table(f2, .30))
+xtable::xtable(fa_table(f2, fa_cutoff))
 ```
 
 
@@ -205,7 +236,7 @@ xtable::xtable(fa_table(f2, .30))
 
 
 ```{r}
-f3 <- fa(scaled, 3, rotate="varimax", scores="tenBerge", fm = "ml")
+f3 <- fa(scaled, 3, rotate="varimax", scores="tenBerge", fm = "minchi")
 print(f3)
 factor.stats(scaled, f3, n.obs = nrow(scaled))
 ```
@@ -215,7 +246,7 @@ f3$loadings
 ```
 
 ```{r}
-f3 <- fa(scaled, 3, rotate="promax", scores="tenBerge", fm = "ml")
+f3 <- fa(scaled, 3, rotate="promax", scores="tenBerge", fm = "minchi")
 print(f3)
 factor.stats(scaled, f3, n.obs = nrow(scaled))
 ```
@@ -225,7 +256,7 @@ f3$loadings
 ```
 
 ```{r}
-xtable::xtable(fa_table(f3, .30))
+xtable::xtable(fa_table(f3, fa_cutoff))
 ```
 
 
@@ -234,7 +265,7 @@ xtable::xtable(fa_table(f3, .30))
 ### 4 Loadings
 
 ```{r}
-f4 <- fa(scaled, 4, rotate="varimax", scores="tenBerge", fm = "ml")
+f4 <- fa(scaled, 4, rotate="varimax", scores="tenBerge", fm = "minchi")
 print(f4)
 factor.stats(scaled, f4, n.obs = nrow(scaled))
 ```
@@ -244,7 +275,7 @@ f4$loadings
 ```
 
 ```{r}
-xtable::xtable(fa_table(f4, .30))
+xtable::xtable(fa_table(f4, fa_cutoff))
 ```
 
 
@@ -258,7 +289,7 @@ factor.stats(scaled, f5, n.obs = nrow(scaled))
 ```
 
 ```{r}
-xtable::xtable(fa_table(f5, .30))
+xtable::xtable(fa_table(f5, fa_cutoff))
 ```
 
 
