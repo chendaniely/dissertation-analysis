@@ -95,6 +95,11 @@ if (interactive()) {
   png(here::here("./output/persona/efa_eigen_scree.png"))
   plotnScree(nS)
   dev.off()
+  
+  fs::dir_create(here::here("../dissertation-edt/figs/010-validation/"))
+  png(here::here("../dissertation-edt/figs/010-validation/efa_eigen_scree.png"))
+  plotnScree(nS)
+  dev.off()
 }
 
 ```
