@@ -77,7 +77,11 @@ likert_plot <- function(likert_q_count,
     xlab("") +
     ylab("") +
     theme_minimal() +
-    theme(axis.text.x = element_text(angle = x_text_angle, hjust = x_text_hjust, vjust = x_text_vjust)) +
+    theme(axis.text.x = element_text(angle = x_text_angle,
+                                     hjust = x_text_hjust,
+                                     vjust = x_text_vjust),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank()) +
     NULL
   
   # different ways to make the number more visiable

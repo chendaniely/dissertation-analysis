@@ -26,6 +26,7 @@ library(kableExtra)
 source(here("./R/plot_question_bar.R"))
 source(here("./R/likert.R"))
 source(here("./R/recode_occupation.R"))
+source(here::here("./R/save_analysis_edt.R"))
 
 # params <- list(); params$num_clusters <- 4; params$survey_data <- "survey_likert"
 
@@ -48,6 +49,16 @@ counts <- persona %>%
   tidyr::drop_na() %>%
   dplyr::ungroup()
 ```
+
+```{r}
+persona$id_person %>% unique() %>% length() # 67
+```
+
+
+```{r}
+persona %>% filter(!is.na(group3)) %>% distinct(id_person) %>% nrow() # 57
+```
+
 
 ```{r}
 knitr::include_graphics(here::here(glue::glue(
@@ -93,7 +104,16 @@ pth <- here("./output",
             glue::glue("{params$survey_data}"),
             glue::glue("group_descriptives_{params$num_clusters}"),
             glue::glue("group_cluster_occupation.png"))
-ggsave(filename = pth, plot = g, width = 8, height = 5, units = "in")
+
+if (params$num_clusters == 3) {
+  save_analysis_edt(
+    g = g,
+    analysis_pth = pth,
+    edt_pth = here::here(glue::glue("../dissertation-edt/figs/020-persona/{params$survey_data}/group_cluster_occupation_{params$num_clusters}.png"))
+  )
+} else {
+  ggsave(filename = pth, plot = g, width = 8, height = 5, units = "in")
+}
 ```
 
 ```{r}
@@ -133,7 +153,23 @@ for (q in unique(counts$qbase)) {
               glue::glue("{q}.png"))
   print(pth)
   print(g)
-  ggsave(filename = pth, plot = g, width = 8, height = 5, units = "in")
+  
+  if (q %in% c("Q2.3", "Q3.4", "Q6.2")) { # plots used for dissertation
+    edt_pth <- here("..",
+              "dissertation-edt",
+              "figs",
+              "020-persona",
+              glue::glue("{params$survey_data}"),
+              glue::glue("{q}-group-{params$num_clusters}.png"))
+    save_analysis_edt(
+      g = g,
+      analysis_pth = pth,
+      edt_pth = edt_pth,
+      width = 8, height = 5, units = "in", bg = "white"
+    )
+  } else {
+    ggsave(filename = pth, plot = g, width = 8, height = 5, units = "in", bg = "white")
+  }
 }
 ```
 
@@ -160,6 +196,46 @@ ggsave(filename = here("./output",
        height = 8,
        units = "in")
 ```
+
+## Separate plots for likert questions
+
+```{r}
+g <- likert_q_count %>%
+  tidyr::drop_na() %>%
+  dplyr::filter(text == "Using a programming language (like R or Python) can make my analyses easier to reproduce.") %>%
+  ggplot(aes(x = response, y = n, fill = as.factor(group3))) +
+  geom_bar(stat = "identity", position = "dodge") +
+  coord_flip() +
+  ggtitle(stringr::str_wrap("Using a programming language (like R or Python) can make my analyses easier to reproduce.", 80)) +
+  theme_minimal() +
+  theme(
+    plot.title.position = "plot"
+  )
+
+print(g)
+
+analysis_pth <- here("./output",
+                       "persona",
+                       glue::glue("{params$survey_data}"),
+                       glue::glue("group_descriptives_{params$num_clusters}"),
+                       "Q7.2_7.png")
+
+edt_pth <- here("../",
+                "dissertation-edt",
+                "figs",
+                "020-persona",
+                glue::glue("{params$survey_data}"),
+                glue::glue("Q7.2_7-{params$num_clusters}.png")
+                )
+
+save_analysis_edt(
+  g = g,
+  analysis_pth = analysis_pth,
+  edt_pth = edt_pth,
+  width = 8, height = 5, units = "in")
+  
+```
+
 
 ## Heatmap by proportion in group
 

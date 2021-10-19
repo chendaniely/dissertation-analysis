@@ -30,6 +30,7 @@ library(ggdendro)
 library(ggplot2)
 
 source(here::here("./R/gg_plot_dendro.R"))
+source(here::here("./R/save_analysis_edt.R"))
 
 # params <- list(); params$survey_data <- "survey_likert"
 stopifnot(
@@ -95,6 +96,14 @@ numeric_data_scaled <- scale(numeric_data)
 ```{r}
 numeric_data_scaled[1:5, 1:6]
 ```
+
+```{r}
+# num observations used for clustering
+fs::dir_create(here::here("data/final/paper/"))
+nrow(numeric_data_scaled) %>%
+  saveRDS(here::here("data/final/paper/num_obs_clustering.RDS"))
+```
+
 
 
 
@@ -192,7 +201,8 @@ Calculate agglomerative coefficient (closer to 1 mean stronger clustering struct
 m <- c("average", "single", "complete", "ward")
 names(m) <- c( "average", "single", "complete", "ward")
 
-purrr::map_dbl(m, ~ cluster::agnes(numeric_data_scaled, method = .)$ac)
+purrr::map_dbl(m, ~ cluster::agnes(numeric_data_scaled, method = .)$ac) %>%
+  round(2)
 ```
 
 Ward's gives us the best clustering structure
@@ -230,12 +240,22 @@ rownames(numeric_data) <- rownames(wide)
 
 
 ```{r}
-plot_all_dendros <- function(hc_dat, k, ...) {
-  png(here::here(glue::glue("./output/persona/{params$survey_data}/dendogram_{k}.png")),
+plot_all_dendros <- function(hc_dat, k, ..., save_dir=NULL) {
+  
+  if (!is.null(save_dir)) {
+    png(glue::glue("{save_dir}/dendogram_{k}.png"),
       width = 13, height = 8, units = "in", res = 72)
-  plot(hc_ward, cex = 0.6)
-  rect.hclust(hc_ward, k = k, border = 2:3)
+  } else {
+      png(here::here(glue::glue("./output/persona/{params$survey_data}/dendogram_{k}.png")),
+      width = 13, height = 8, units = "in", res = 72)
+  }
+
+  plot(hc_dat, cex = 0.6)
+  rect.hclust(hc_dat, k = k, border = 2:3)
   dev.off()
+  
+  plot(hc_dat, cex = 0.6)
+  rect.hclust(hc_dat, k = k, border = 2:3)
   
   g <- gg_plot_dendro(hc_ward, ...)
   print(g)
@@ -243,6 +263,12 @@ plot_all_dendros <- function(hc_dat, k, ...) {
   ggsave(here::here(glue::glue("./output/persona/{params$survey_data}/dendogram_{k}_gg.png")),
          plot = g,
          width = 13, height = 8, units = "in", dpi = 72)
+  
+  if (!is.null(save_dir)) {
+    ggsave(glue::glue("{save_dir}/dendogram_{k}_gg.png"),
+         plot = g,
+         width = 13, height = 8, units = "in", dpi = 72)
+  }
 }
 ```
 
@@ -255,8 +281,19 @@ plot_all_dendros(hc_ward, k = 3, group3)
 ```
 
 ```{r}
+dir_pth <- here::here(glue::glue("../dissertation-edt/figs/020-persona/{params$survey_data}/"))
+fs::dir_create(dir_pth)
+plot_all_dendros(hc_ward, k = 3, group3, save_dir = dir_pth)
+```
+
+```{r}
 plot_all_dendros(hc_ward, k = 4, group4)
 ```
+
+```{r}
+plot_all_dendros(hc_ward, k = 4, group4, save_dir = dir_pth)
+```
+
 
 ```{r}
 plot_all_dendros(hc_ward, k = 5, group5)
@@ -279,12 +316,22 @@ https://uc-r.github.io/kmeans_clustering#elbow
 png(here(glue::glue("./output/persona/{params$survey_data}/elbow_plot.png")))
 factoextra::fviz_nbclust(numeric_data_scaled, FUN = factoextra::hcut, method = "wss")
 dev.off()
+
+fs::dir_create(here(glue::glue("../dissertation-edt/figs/020-persona/")))
+png(here(glue::glue("../dissertation-edt/figs/020-persona/elbow_plot-{params$survey_data}.png")))
+factoextra::fviz_nbclust(numeric_data_scaled, FUN = factoextra::hcut, method = "wss")
+dev.off()
 ```
 
 #### Gap statistic
 
 ```{r}
 png(here(glue::glue("./output/persona/{params$survey_data}/gap_statistic.png")))
+gap_stat <- clusGap(numeric_data_scaled, FUN = kmeans, nstart = 30, K.max = 24, B = 50)
+fviz_gap_stat(gap_stat) + theme_minimal() + ggtitle("fviz_gap_stat: Gap Statistic")
+dev.off()
+
+png(here(glue::glue("../dissertation-edt/figs/020-persona/gap_statistic-{params$survey_data}.png")))
 gap_stat <- clusGap(numeric_data_scaled, FUN = kmeans, nstart = 30, K.max = 24, B = 50)
 fviz_gap_stat(gap_stat) + theme_minimal() + ggtitle("fviz_gap_stat: Gap Statistic")
 dev.off()

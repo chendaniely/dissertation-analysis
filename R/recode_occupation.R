@@ -8,11 +8,11 @@ recode_occupation <- function(dat, occupation_col) {
     dplyr::mutate(
       occupation_group = dplyr::case_when(
         {{ occupation_col }} %in% researcher_group ~ "researcher",
-        {{ occupation_col }} %in% admin_group ~ "admin",
+        {{ occupation_col }} %in% admin_group ~ "researcher",
         
         {{ occupation_col }} %in% c("RN/PA", "DO/MD", "DVM", "PharmD") ~ "clinician",
         
-        {{ occupation_col }} %in% c("Student (DVM)") ~ "clinical_student",
+        {{ occupation_col }} %in% c("Student (DVM)") ~ "student",
         
         {{ occupation_col }} %in% c("Student (Graduate)",
                                     "Student (Masters e.g., MPH)",
