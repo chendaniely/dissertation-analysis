@@ -77,9 +77,20 @@ survey_dfs_deidentified <- purrr::map(survey_dfs,
                                         dplyr::select(id_person, id_response, everything())
 )
 
+## Drop duplicate responses by up filling (backfill) their responses
+
+survey_dfs_deidentified_dedup <- purrr::map(survey_dfs_deidentified, remove_duplicate_ids)
+
+survey_info <- survey_info %>%
+  dplyr::mutate(
+    num_nodups = purrr::map_int(survey_dfs_deidentified_dedup, nrow)
+  )
+
+print(survey_info)
+
 ## Save out the survey data -----
 
-survey_dfs_deidentified[[2]]
+survey_dfs_deidentified_dedup[[2]]
 
 
 survey_save_pths <- c(
@@ -91,4 +102,4 @@ survey_save_pths <- c(
 
 fs::dir_create(here("./data/original/surveys"), recurse = TRUE)
 
-purrr::walk2(survey_dfs_deidentified, survey_save_pths, readr::write_tsv)
+purrr::walk2(survey_dfs_deidentified_dedup, survey_save_pths, readr::write_tsv)
