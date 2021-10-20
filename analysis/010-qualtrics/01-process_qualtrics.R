@@ -7,6 +7,7 @@ library(purrr)
 library(glue)
 library(lubridate)
 library(stringr)
+library(janitor)
 
 source(here("./R/remove_identifiers.R"))
 source(here("./R/remove_invalid_rows.R"))
@@ -76,6 +77,11 @@ survey_dfs_deidentified <- purrr::map(survey_dfs,
                                         dplyr::select(-ResponseId, -Q2.2) %>%
                                         dplyr::select(id_person, id_response, everything())
 )
+
+## Look at duplicate id_person rows
+
+dups <- purrr::map(survey_dfs_deidentified, ~ janitor::get_dupes(., id_person))
+dups
 
 ## Drop duplicate responses by up filling (backfill) their responses
 
