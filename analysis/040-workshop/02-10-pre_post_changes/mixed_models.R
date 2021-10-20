@@ -14,7 +14,7 @@ postworkshop <- readr::read_tsv(here("./data/final/01-surveys/03-post_workshop_w
 pre_likert <- preworkshop %>%
   dplyr::filter(qbase == "Q5.2" | qbase == "Q5.3") %>%
   #dplyr::filter(qbase == "Q5.3") %>% # LOs only
-  dplyr::select(id, question_part, response) %>%
+  dplyr::select(id_person, question_part, response) %>%
   dplyr::mutate(pre_post = 0)
 
 post_likert <- postworkshop %>%
@@ -81,6 +81,17 @@ drop <- c(29, 60, 56, 57, 28, 19, 69, 72, 68)
 
 df <- df %>%
   dplyr::filter(!id %in% drop)
+
+df %>%
+  group_by(id, question_part) %>%
+  summarize(ct = n()) %>%
+  arrange(-ct) %>%
+  filter(ct > 1) %>%
+  distinct(id)
+
+
+df <- df %>%
+  dplyr::filter(!id %in% c(117, 120))
 
 responses <- df %>%
   dplyr::filter(!id %in% drop) %>%

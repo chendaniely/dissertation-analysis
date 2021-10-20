@@ -1,0 +1,78 @@
+---
+title: "Untitled"
+author: "Daniel Chen"
+date: "10/19/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(magrittr)
+library(readr)
+library(here)
+library(janitor)
+library(dplyr)
+library(tidyr)
+library(purrr)
+
+pre <- readr::read_tsv(here("./data/original/surveys/01-02-pre_workshop.tsv"), lazy = FALSE)
+post <- readr::read_tsv(here("./data/original/surveys/01-03-post_workshop.tsv"), lazy = FALSE)
+long <- readr::read_tsv(here("./data/original/surveys/01-04-longterm_workshop.tsv"), lazy = FALSE)
+```
+
+# Check for duplicate IDs
+
+```{r}
+pre_dups <- pre %>%
+  janitor::get_dupes(id_person)
+
+pre1 <- pre %>%
+  dplyr::group_by(id_person) %>%
+  tidyr::fill(-id_person, .direction = "up") %>% 
+  dplyr::slice(1) %>%
+  dplyr::ungroup()
+```
+
+```{r}
+post_dups <- post %>%
+  janitor::get_dupes(id_person)
+
+post1 <- post %>%
+  dplyr::group_by(id_person) %>%
+  tidyr::fill(-id_person, .direction = "up") %>% 
+  dplyr::slice(1) %>%
+  dplyr::ungroup()
+```
+
+```{r}
+long_dups <- long %>%
+  janitor::get_dupes(id_person)
+
+long1 <- long %>%
+  dplyr::group_by(id_person) %>%
+  tidyr::fill(-id_person, .direction = "up") %>% 
+  dplyr::slice(1) %>%
+  dplyr::ungroup()
+```
+
+```{r}
+dat_list <- list(pre1, post1, long1)
+```
+
+```{r}
+# check that only 1 id value in each dataset
+purrr::walk(dat_list,
+            ~ . %>%
+              dplyr::pull(id_person) %>%
+              duplicated() %>%
+              any() %>%
+              isFALSE() %>%
+              stopifnot())
+```
+
+```{r}
+purrr::walk(dat_list, ~ print(nrow(.)))
+```
+
+# 
