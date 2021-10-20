@@ -3,6 +3,9 @@ library(stringr)
 library(glue)
 library(dplyr)
 
+#' Fetch survey from qualtrics based on pattern match
+#' pattern is used to match the survey name
+#' col_select_pattern select columns based on pattern
 get_survey <- function(pattern, col_select_pattern = "^Q\\d") {
   all_surveys <- all_surveys()
   found_surveys <- stringr::str_detect(all_surveys$name, pattern)
