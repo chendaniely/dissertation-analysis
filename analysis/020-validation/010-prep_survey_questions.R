@@ -6,7 +6,7 @@ library(utf8)
 library(stringr)
 library(tidyr)
 
-source(here::here("./analysis/010-qualtrics/question_str_to_int.R"))
+source(here::here("./R/question_str_to_int.R"))
 
 persona_wide <- function(dat, qnum = c(3, 4, 5, 6)) {
   qpattern <- glue("Q[{paste0(qnum, collapse = '|')}]")
