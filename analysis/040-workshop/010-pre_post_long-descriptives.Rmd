@@ -15,64 +15,152 @@ library(janitor)
 library(dplyr)
 library(tidyr)
 library(purrr)
+library(glue)
 
-pre <- readr::read_tsv(here("./data/original/surveys/01-02-pre_workshop.tsv"), lazy = FALSE)
-post <- readr::read_tsv(here("./data/original/surveys/01-03-post_workshop.tsv"), lazy = FALSE)
-long <- readr::read_tsv(here("./data/original/surveys/01-04-longterm_workshop.tsv"), lazy = FALSE)
+pre <- readr::read_tsv(here("./data/final/01-surveys/02-pre_workshop_with_questions.tsv"), lazy = FALSE) %>%
+  dplyr::filter(!is.na(id_person))
+post <- readr::read_tsv(here("./data/final/01-surveys/03-post_workshop_with_questions.tsv"), lazy = FALSE) %>%
+  dplyr::filter(!is.na(id_person))
+long <- readr::read_tsv(here("./data/final/01-surveys/04-longterm_workshop_with_questions.tsv"), lazy = FALSE) %>%
+  dplyr::filter(!is.na(id_person))
 ```
 
 # Check for duplicate IDs
 
 ```{r}
-pre_dups <- pre %>%
-  janitor::get_dupes(id_person)
+print_dat_stats <- function(dat) {
+  # count the number responses for each id_person
+  # if there are no duplicate IDs, then everyone would have the same count
+  # and the results should only have 1 row of data
+  cts <- dat %>%
+    select(id_person) %>%
+    count(id_person, sort = TRUE) %>%
+    count(n)
+  print(cts)
+  
+  stopifnot(nrow(cts) == 1)
+}
+```
 
-pre1 <- pre %>%
-  dplyr::group_by(id_person) %>%
-  tidyr::fill(-id_person, .direction = "up") %>% 
-  dplyr::slice(1) %>%
-  dplyr::ungroup()
+
+```{r}
+pre %>%
+  print_dat_stats()
+
+post %>%
+  print_dat_stats()
+
+long %>%
+  print_dat_stats()
+```
+
+# Descriptives
+
+```{r}
+count_num_respondants <- function(dat) {
+  dat %>%
+    dplyr::pull(id_person) %>%
+    unique() %>%
+    length()
+}
+```
+
+
+```{r}
+num_pre <- count_num_respondants(pre)
+num_post <- count_num_respondants(post)
+num_long <- count_num_respondants(long)
 ```
 
 ```{r}
-post_dups <- post %>%
-  janitor::get_dupes(id_person)
+print(
+  glue::glue(
+    "Num pre: {num_pre}\nNum Post: {num_post}\nNum Long: {num_long}"
+  )
+)
+```
 
-post1 <- post %>%
-  dplyr::group_by(id_person) %>%
-  tidyr::fill(-id_person, .direction = "up") %>% 
-  dplyr::slice(1) %>%
-  dplyr::ungroup()
+Who has taken more than 1 of the surveys
+
+```{r}
+ids_all <- purrr::map2_dfr(list(pre, post, long),
+                           list("pre", "post", "long"),
+                           ~ .x %>%
+                             dplyr::select(id_person) %>%
+                             dplyr::mutate(survey = .y) %>%
+                             dplyr::distinct(id_person, survey)
+)
 ```
 
 ```{r}
-long_dups <- long %>%
-  janitor::get_dupes(id_person)
-
-long1 <- long %>%
-  dplyr::group_by(id_person) %>%
-  tidyr::fill(-id_person, .direction = "up") %>% 
-  dplyr::slice(1) %>%
-  dplyr::ungroup()
+multi_surv_ids <- ids_all %>%
+  dplyr::count(id_person, sort = TRUE) %>%
+  dplyr::filter(n > 1) %>%
+  dplyr::pull(id_person)
 ```
 
 ```{r}
-dat_list <- list(pre1, post1, long1)
+multi_surv_df <- ids_all %>%
+  filter(id_person %in% multi_surv_ids)
 ```
 
 ```{r}
-# check that only 1 id value in each dataset
-purrr::walk(dat_list,
-            ~ . %>%
-              dplyr::pull(id_person) %>%
-              duplicated() %>%
-              any() %>%
-              isFALSE() %>%
-              stopifnot())
+multi_surv_counts <- multi_surv_df %>%
+  dplyr::count(id_person, survey) %>%
+  tidyr::pivot_wider(id_person, names_from = survey, values_from = n, values_fill = 0) %>%
+  dplyr::select(id_person, pre, post, long) %>%
+  dplyr::mutate(
+    all = pre + post + long,
+    pre_post = pre + post,
+    pre_long = pre + long,
+    post_long = post + long
+  ) %>%
+  dplyr::arrange(-all, -pre_post, -pre_long, -post_long) %>%
+  print(n = Inf)
 ```
 
 ```{r}
-purrr::walk(dat_list, ~ print(nrow(.)))
+num_all_3 <- multi_surv_counts %>%
+  dplyr::filter(all == 3) %>%
+  nrow()
 ```
 
-# 
+```{r}
+num_pre_post <- multi_surv_counts %>%
+  dplyr::filter(pre_post == 2) %>%
+  nrow()
+```
+
+```{r}
+num_pre_long <- multi_surv_counts %>%
+  dplyr::filter(pre_long == 2) %>%
+  nrow()
+```
+
+```{r}
+print(
+  glue::glue(
+    "
+    Num all 3: {num_all_3}
+    Num pre+post: {num_pre_post}; Num only pre+post: {num_pre_post - num_all_3}
+    Num pre+long: {num_pre_long}; Num only pre+long: {num_pre_long - num_all_3}
+    "
+  )
+)
+```
+
+```{r}
+stopifnot(
+  nrow(multi_surv_counts) ==
+    (num_all_3) + (num_pre_post - num_all_3) + (num_pre_long - num_all_3)
+)
+```
+
+```{r}
+fs::dir_create(here::here("./data/final/030-pre_post_long"))
+readr::write_tsv(
+  multi_surv_counts,
+  here::here("./data/final/030-pre_post_long/multi_surv_counts.tsv")
+)
+```
+
