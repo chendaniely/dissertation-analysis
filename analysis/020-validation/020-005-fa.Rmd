@@ -15,6 +15,7 @@ library(GPArotation)
 library(progress)
 library(flextable)
 library(xtable)
+library(corrplot)
 
 knitr::opts_chunk$set(echo = TRUE)
 ```
@@ -74,6 +75,106 @@ numeric <- tibble::column_to_rownames(numeric, var = "id_person")
 scaled <- scale(numeric)
 ```
 
+# Data correlation
+
+Taken from Jen at biostat office hours
+
+```{r}
+#############################################################
+# Examine the data correlation to determine if FA is appropriate
+#############################################################
+# Create the correlation matrix from the simulated data 
+data_corr <- cor(scaled, use="complete.obs")
+sim_data_corr <- round(data_corr,2)
+sim_data_corr
+
+# Look at the p-values
+sim_data_corr_p <- corr.test(scaled, use = "complete.obs")$p
+sim_data_corr_p
+
+sig_p <- vector(mode='character', length=nrow(sim_data_corr_p)*ncol(sim_data_corr_p))
+index <- 1
+
+for(i in 1:nrow(sim_data_corr_p)){
+  for(j in 1:ncol(sim_data_corr_p)){
+    if(i == j){
+      sig_p[index] = 'Identity'
+    }else if(sim_data_corr_p[i,j] <= 0.05 & abs(sim_data_corr[i,j]) >= 0.5){
+      sig_p[index] = 'Significant'
+    }else{
+      sig_p[index] = 'Not Significant'
+    }
+    index <-index + 1
+  }
+}
+
+table(sig_p)
+
+dat_corr <- sim_data_corr %>%
+  tibble::as_tibble(rownames = "row") %>%
+  tidyr::pivot_longer(-row) %>%
+  dplyr::rename(corr = value)
+
+dat_p <- sim_data_corr_p %>%
+  tibble::as_tibble(rownames = "row") %>%
+  tidyr::pivot_longer(-row) %>%
+  dplyr::rename(p = value)
+
+dat_corr_p_sig <- dplyr::inner_join(dat_corr,
+                                    dat_p,
+                                    by = c("row", "name")) %>%
+  dplyr::mutate(sig = dplyr::case_when(
+    corr == 1 & p == 0 ~ "identity",
+    abs(corr) >= 0.5 & p < 0.05 ~ "significant",
+    TRUE ~ "not significant"
+  ))
+
+dat_corr_p_sig %>%
+  dplyr::count(sig) # should get same results as table(sig_p)
+
+# Visualize the correlation matrix
+# from http://www.sthda.com/english/wiki/visualize-correlation-matrix-using-correlogram
+col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
+corrplot(data_corr, method="color", col=col(200),  
+         type="full", order="hclust", 
+         addCoef.col = "black", # Add coefficient of correlation
+         tl.col="black", tl.srt=45, #Text label color and rotation
+         # Combine with significance
+         p.mat = sim_data_corr_p, sig.level = 0.05, insig = "blank", 
+         # hide correlation coefficient on the principal diagonal
+         diag=TRUE 
+         )
+
+```
+
+"bad" questions
+
+```{r}
+# these counts are based off the identity/sig/not-sig counts,
+# not off corr plot non-blank values
+dat_corr_p_sig <- dat_corr_p_sig %>%
+  dplyr::filter(sig  == "significant") %>%
+  dplyr::count(row, sort = TRUE) %>%
+  dplyr::mutate(
+    prop = n / ncol(scaled) # get proportion significant cols from total cols
+  )
+
+good_questions <- dat_corr_p_sig %>%
+  dplyr::filter(prop > 0.3) %>%
+  dplyr::pull(row)
+
+print(length(good_questions))
+good_questions
+```
+
+```{r}
+scaled_good <- numeric %>%
+  dplyr::select(tidyselect::all_of(good_questions)) %>%
+  scale()
+```
+
+
+
 # EFA
 
 Taken from: https://www.statmethods.net/advstats/factor.html
@@ -103,6 +204,7 @@ if (interactive()) {
 }
 
 ```
+
 
 ## Loadings
 
@@ -172,6 +274,29 @@ good_res_combos %>%
 
 ```{r}
 fa_cutoff <- 0.30
+```
+
+#### Good vars
+
+```{r}
+all_param_res_good <- purrr::pmap(l_params,
+                                  function(nfactors, rotation, factor_method) {
+                                    safe_my_efa(scaled_good, nfactors, rotation, factor_method)
+                                  }
+)
+
+t <- all_param_res_good %>%
+  purrr::transpose() %>%
+  purrr::simplify_all()
+
+all_res_df <- t$result %>%
+  dplyr::bind_rows()
+
+good_res_combos <- all_res_df %>%
+  dplyr::filter(tli >= 0.9, rmsea < 0.08)
+
+good_res_combos %>%
+  dplyr::count(nfactors)
 ```
 
 ### Item distributions
@@ -259,7 +384,21 @@ f3$loadings
 xtable::xtable(fa_table(f3, fa_cutoff))
 ```
 
+#### Good
 
+```{r}
+f3_good <- fa(scaled_good, 3, rotate="varimax", scores="tenBerge", fm = "minchi")
+print(f3_good)
+factor.stats(scaled_good, f3_good, n.obs = nrow(scaled_good))
+```
+
+```{r}
+psych::fa.diagram(f3_good)
+```
+
+```{r}
+xtable::xtable(fa_table(f3_good, fa_cutoff))
+```
 
 
 ### 4 Loadings
@@ -480,98 +619,6 @@ joined_id_group %>%
                    total = n(),
                    prop_match = round(matches / total, digits = 2)) %>%
   knitr::kable()
-```
-
-
-# CART
-
-- 6.2
-  1. "I wouldn't know where to start",
-  2. "I could struggle through, but not confident I could do it",
-  3. "I could struggle through by trial and error with a lot of web searches",
-  4. "I could do it quickly with little or no use of external help"
-
-- 3.3
-  1. "I do not know what those are",
-  2. "I have heard of them but have never used them before",
-  3. "I have installed it, but have only done simple examples with them",
-  4. "I have written a small program with them before",
-  5. "I use it to automate certain repetitive tasks",
-  6. "I have small side projects that I program in it",
-  7. "I program in them for work"
-
-- 4.4
-  1. "I have never heard of the term",
-  2. "I have heard of it but don't remember what it is.",
-  3. "I have some idea of what it is, but am not too clear",
-  4. "I know what it is and could explain what it pertains to"
-
-```{r}
-library(rpart)
-
-tree_dat <- numeric %>%
-  dplyr::select(group4, starts_with("Q")) %>%
-  tibble::rownames_to_column("id") %>%
-  dplyr::left_join(efa4, by="id", suffix = c("_dendo", "_efa")) %>%
-  dplyr::select(group4_efa, starts_with("Q"))
-
-model <- rpart(group4_efa ~ ., data = tree_dat)
-
-png(here("./output/persona/cart.png"))
-par(xpd = NA) # otherwise on some devices the text is clipped
-plot(model)
-text(model, digits = 3)
-dev.off()
-```
-
-```{r}
-library(rpart)
-tree_dat_all_q <- numeric %>%
-  select(group4, starts_with("Q"))
-
-model_all_q <- rpart(group4 ~ ., data = tree_dat_all_q)
-
-par(xpd = model_all_q) # otherwise on some devices the text is clipped
-plot(model_all_q)
-text(model_all_q, digits = 3)
-```
-
-# CFA
-
-Using the 3 factor EFA results:
-
-```{r}
-print(efa3, digits=2, cutoff=.3, sort=TRUE)
-```
-
-
-```{r}
-ds_model <- '
-programming =~ Q3.1 + Q3.3 + Q3.4 + Q3.5 + Q5.2
-statistics =~ Q6.1 + Q6.2 + Q6.3
-data =~ Q4.4 + Q6.4
-'
-```
-
-```{r}
-library(lavaan)
-library(semPlot)
-```
-
-```{r}
-cfa <- lavaan::cfa(ds_model, data = scaled)
-summary(cfa, standardized = TRUE)
-```
-
-```{r}
-semPlot::semPaths(cfa)
-```
-
-```{r}
-png(here::here("./output/persona/cfa.png"),
-    width = 8, height = 5, units = "in", res = 300)
-semPlot::semPaths(cfa, "std")
-dev.off()
 ```
 
 ## CFA Fit
