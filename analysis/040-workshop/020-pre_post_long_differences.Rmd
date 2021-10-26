@@ -16,9 +16,32 @@ library(ggplot2)
 library(forcats)
 library(tidyr)
 library(fs)
+library(VennDiagram)
 
 source(here("./R/save_analysis_edt.R"))
 
+theme_edt_subfig <- function() {
+  ggplot2::theme(
+    plot.title = element_text(size = 27),
+    plot.subtitle = element_text(size = 20),
+    axis.title = element_text(size = 25),
+    axis.text.y = element_text(size = 20),
+    axis.text.x = element_text(size = 20),
+    legend.title = element_text(size = 20),
+    legend.text = element_text(size = 15),
+    plot.title.position = "plot"
+  )
+}
+
+wdth <- 8
+hght <- 8
+
+fs::dir_create(here("output/survey/050-longitudinal"))
+fs::dir_create(here("../dissertation-edt/figs/030-logitudinal"))
+```
+
+
+```{r}
 pre_post_long_responses <- readr::read_tsv(here::here("./data/final/030-pre_post_long/multi_surv_counts.tsv"), lazy = FALSE)
 
 pre <- readr::read_tsv(here("./data/final/01-surveys/02-pre_workshop_with_questions.tsv"), lazy = FALSE) %>%
@@ -121,7 +144,107 @@ long_unpaired_prepostlong <- long %>%
   dplyr::filter(!id_person %in% pre_post_long_paired_ids_any)
 ```
 
+```{r}
+pre_unpaired_prepostlong %>%
+  dplyr::pull(id_person) %>%
+  unique() %>%
+  length()
+```
+
+```{r}
+post_unpaired_prepostlong %>%
+  dplyr::pull(id_person) %>%
+  unique() %>%
+  length()
+```
+
+```{r}
+long_unpaired_prepostlong %>%
+  dplyr::pull(id_person) %>%
+  unique() %>%
+  length()
+```
+
+
 ## Descriptives
+
+### Venn Diagram Counts
+
+```{r}
+library(RColorBrewer)
+myCol <- brewer.pal(3, "Pastel2")
+venn.diagram(
+  x = list(unique(pre$id_person),
+           unique(post$id_person),
+           unique(long$id_person)),
+  category.names = c("Pre" , "Post " , "Long-Term"),
+  filename = here::here("../dissertation-edt/figs/030-logitudinal/pre-post-long-response-counts.png"),
+  imagetype = "png",
+  height = 755,
+  width = 1200,
+  resolution = 300,
+  output = TRUE,
+
+  main = "Participant Counts Across All 3 Surveys",
+
+  # Circles
+  lwd = 1,
+  lty = 'blank',
+  fill = myCol,
+
+  # Numbers
+  cex = 1,
+  fontface = "bold",
+  #fontfamily = "sans",
+
+  # Set names
+  cat.cex = 1,
+  cat.fontface = "bold",
+  cat.default.pos = "outer",
+  #cat.fontfamily = "sans",
+  rotation = 3,
+  reverse = FALSE
+)
+```
+
+
+```{r}
+venn <- VennDiagram::draw.triple.venn(
+  area1 = pre_n,
+  area2 = post_n,
+  area3 = long_n,
+  n12 = pre_post_n,
+  n23 = post_long_n,
+  n13 = pre_long_n,
+  n123 = pre_post_long_n
+)
+
+grid.draw(venn);
+grid.newpage();
+```
+
+```{r}
+venn.plot <- draw.triple.venn(65, 75, 85,
+ 35, 15, 25, 5, c("First", "Second", "Third"));
+grid.draw(venn.plot);
+grid.newpage();
+```
+
+
+```{r}
+pre_post_long_responses
+```
+
+```{r}
+pre_n <- length(unique(pre$id_person))
+post_n <- length(unique(post$id_person))
+long_n <- length(unique(long$id_person))
+
+pre_post_n <- sum(pre_post_long_responses$pre_post == 2)
+post_long_n <- sum(pre_post_long_responses$post_long == 2)
+pre_long_n <- sum(pre_post_long_responses$pre_long == 2)
+pre_post_long_n <- sum(pre_post_long_responses$all == 3)
+```
 
 ### pre
 
@@ -182,7 +305,6 @@ for (ques in pre_scaled_questions) {
 }
 ```
 
-
 ### pre-post
 
 ```{r}
@@ -194,8 +316,6 @@ post_unpaired_prepost %>%
   stopifnot() # make sure all participants have the same number of responses
   # another way to check for duplicate IDs and incomplete reponses
 ```
-
-
 
 ```{r}
 question_response_totals_post <- post_unpaired_prepost %>%
@@ -244,11 +364,31 @@ paired_pre_post <- paired_pre_post %>%
 
 # Pre-Post-Long Differences
 
-
 ## All Likert Responses Proportions
 
 ```{r}
-paired_pre_post %>%
+g_propprop_sum <- paired_pre_post %>%
+  dplyr::filter(matched_set == 1, !is.na(response)) %>%
+  ggplot(aes(x = forcats::fct_reorder(response, scale_value),
+             y = n / total,
+             fill = pre_post)) +
+    geom_bar(stat = "identity", position = "fill") +
+    labs(
+      x = "",
+      y = "Proportion of proportion of responses",
+      title = "Pre-Post Results: Summary Likert"
+    ) +
+    theme_minimal() +
+    theme_edt_subfig() +
+    theme(
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank()
+    ) +
+    coord_flip()
+
+print(g_propprop_sum)
+
+g_prop_sum <- paired_pre_post %>%
   dplyr::filter(matched_set == 1, !is.na(response)) %>%
   ggplot(aes(x = forcats::fct_reorder(response, scale_value),
              y = n / total,
@@ -260,13 +400,40 @@ paired_pre_post %>%
       title = "Pre-Post Results: Summary Likert"
     ) +
     theme_minimal() +
-    theme() +
+    theme_edt_subfig() +
+    theme(
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank()
+    ) +
     coord_flip()
+
+print(g_prop_sum)
 ```
 
 
 ```{r}
-paired_pre_post %>%
+g_propprop_lo <- paired_pre_post %>%
+  dplyr::filter(matched_set == 2, !is.na(response)) %>%
+  ggplot(aes(x = forcats::fct_reorder(response, scale_value),
+             y = n / total,
+             fill = pre_post)) +
+    geom_bar(stat = "identity", position = "fill") +
+    labs(
+      x = "",
+      y = "Proportion of proportion of responses",
+      title = "Pre-Post Results: Learning Objectives"
+    ) +
+    theme_minimal() +
+    theme_edt_subfig() +
+    theme(
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank()
+    ) +
+    coord_flip()
+
+print(g_propprop_lo)
+
+g_prop_lo <- paired_pre_post %>%
   dplyr::filter(matched_set == 2, !is.na(response)) %>%
   ggplot(aes(x = forcats::fct_reorder(response, scale_value),
              y = n / total,
@@ -278,12 +445,48 @@ paired_pre_post %>%
       title = "Pre-Post Results: Learning Objectives"
     ) +
     theme_minimal() +
-    theme() +
+    theme_edt_subfig() +
+    theme(
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank()
+    ) +
     coord_flip()
+
+print(g_prop_lo)
+```
+
+```{r}
+.GlobalEnv$save_analysis_edt(
+  g = g_propprop_sum,
+  analysis_pth = here("output/survey/050-logitudinal/pre_post_propprop_summary.png"),
+  edt_pth = here("../dissertation-edt/figs/030-logitudinal/pre_post_propprop_summary.png"),
+  width = wdth, height = hght, units = "in", bg = "white"
+)
+
+.GlobalEnv$save_analysis_edt(
+  g = g_prop_sum,
+  analysis_pth = here("output/survey/050-logitudinal/pre_post_prop_summary.png"),
+  edt_pth = here("../dissertation-edt/figs/030-logitudinal/pre_post_prop_summary.png"),
+  width = wdth, height = hght, units = "in", bg = "white"
+)
+
+.GlobalEnv$save_analysis_edt(
+  g = g_propprop_lo,
+  analysis_pth = here("output/survey/050-logitudinal/pre_post_propprop_lo.png"),
+  edt_pth = here("../dissertation-edt/figs/030-logitudinal/pre_post_propprop_lo.png"),
+  width = wdth, height = hght, units = "in", bg = "white"
+)
+
+.GlobalEnv$save_analysis_edt(
+  g = g_prop_lo,
+  analysis_pth = here("output/survey/050-logitudinal/pre_post_prop_lo.png"),
+  edt_pth = here("../dissertation-edt/figs/030-logitudinal/pre_post_prop_lo.png"),
+  width = wdth, height = hght, units = "in", bg = "white"
+)
 ```
 
 
-## Individual Likert Responses
+## Individual Likert Question Responses
 
 ```{r}
 get_survey_type <- function(survey_type, type_type, unpaired_dat) {
@@ -296,21 +499,6 @@ get_survey_type <- function(survey_type, type_type, unpaired_dat) {
                              "response" = "text"))
 }
 ```
-
-```{r}
-theme_edt_subfig <- function() {
-  ggplot2::theme(
-    plot.title = element_text(size = 27),
-    axis.title = element_text(size = 25),
-    axis.text.y = element_text(size = 20),
-    axis.text.x = element_text(size = 20),
-    legend.title = element_text(size = 20),
-    legend.text = element_text(size = 15),
-    plot.title.position = "plot"
-  )
-}
-```
-
 
 ```{r}
 pre_summary <- get_survey_type("pre", "summary", pre_unpaired_prepostlong)
@@ -385,12 +573,6 @@ print(glo)
 ```
 
 ```{r}
-fs::dir_create(here("output/survey/050-longitudinal"))
-fs::dir_create(here("../dissertation-edt/figs/030-logitudinal"))
-
-wdth <- 8
-hght <- 8
-
 .GlobalEnv$save_analysis_edt(
   g = gsum,
   analysis_pth = here("output/survey/050-logitudinal/pre_post_long_summary.png"),
@@ -454,3 +636,354 @@ print(gsummative)
 )
 ```
 
+# Composite Scores
+
+## Summary
+
+```{r}
+pre_post_long_composite_summary <- pre_post_long_summary %>%
+  dplyr::group_by(survey, id_person) %>%
+  dplyr::summarise(composite_sum = sum(scale_value))
+```
+
+```{r}
+g_comp_sum <- ggplot(pre_post_long_composite_summary,
+       aes(x = forcats::fct_relevel(survey, "pre", "post", "long"),
+           y = composite_sum)) +
+  geom_boxplot() +
+  labs(
+    title = "Longitutinal Composite Scores",
+    subtitle = "Summary Likert Table",
+    x = "Survey",
+    y = "Composite Score"
+  ) +
+  theme_minimal() +
+  theme_edt_subfig() +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+print(g_comp_sum)
+```
+
+```{r}
+lm(composite_sum ~ forcats::fct_relevel(survey, "pre", "post", "long"),
+   data = pre_post_long_composite_summary) %>%
+  summary()
+```
+
+```{r}
+pre_post_long_composite_summary %>%
+  filter(survey %in% c("pre", "post")) %>%
+  wilcox.test(composite_sum ~ survey,
+                   data = .,
+                   exact = FALSE)
+```
+
+
+## Learning Objectives
+
+```{r}
+pre_post_long_composite_lo <- pre_post_long_lo %>%
+  dplyr::group_by(survey, id_person) %>%
+  dplyr::summarise(composite_sum = sum(scale_value))
+```
+
+```{r}
+g_comp_lo <- ggplot(pre_post_long_composite_lo,
+       aes(x = forcats::fct_relevel(survey, "pre", "post", "long"),
+           y = composite_sum)) +
+  geom_boxplot() +
+  labs(
+    title = "Longitutinal Composite Scores",
+    subtitle = "Learning Objective Likert Table",
+    x = "Survey",
+    y = "Composite Score"
+  ) +
+  theme_minimal() +
+  theme_edt_subfig() +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+print(g_comp_lo)
+```
+
+```{r}
+lm(composite_sum ~ forcats::fct_relevel(survey, "post", "pre", "long"),
+   data = pre_post_long_composite_lo) %>%
+  summary()
+```
+
+```{r}
+pre_post_long_composite_lo %>%
+  filter(survey %in% c("pre", "post")) %>%
+  wilcox.test(composite_sum ~ survey,
+                   data = .,
+                   exact = FALSE)
+```
+
+```{r}
+.GlobalEnv$save_analysis_edt(
+  g = g_comp_sum,
+  analysis_pth = here("output/survey/050-logitudinal/pre_post_long_summative_composite.png"),
+  edt_pth = here("../dissertation-edt/figs/030-logitudinal/pre_post_long_summative_composite.png"),
+  width = wdth, height = hght, units = "in", bg = "white"
+)
+
+.GlobalEnv$save_analysis_edt(
+  g = g_comp_lo,
+  analysis_pth = here("output/survey/050-logitudinal/pre_post_long_lo_composite.png"),
+  edt_pth = here("../dissertation-edt/figs/030-logitudinal/pre_post_long_lo_composite.png"),
+  width = wdth, height = hght, units = "in", bg = "white"
+)
+```
+
+# Paired Responses
+
+```{r}
+pre_post_paired_ids <- pre_post_long_responses %>%
+  dplyr::filter(pre_post == 2) %>%
+  dplyr::pull(id_person)
+```
+
+```{r}
+post_long_paird_ids <- pre_post_long_responses %>%
+  dplyr::filter(post_long == 2) %>%
+  dplyr::pull(id_person)
+```
+
+
+```{r}
+pre_post_long_paired_ids_all <- pre_post_long_responses %>%
+  dplyr::filter(all == 3) %>%
+  dplyr::pull(id_person)
+```
+
+```{r}
+# data to be used when comparing all 3 surveys
+pre_paired_prepostlong <- pre %>%
+  dplyr::filter(id_person %in% pre_post_long_paired_ids_all)
+
+post_paired_prepostlong <- post %>%
+  dplyr::filter(id_person %in% pre_post_long_paired_ids_all)
+
+long_paired_prepostlong <- long %>%
+  dplyr::filter(id_person %in% pre_post_long_paired_ids_all)
+```
+
+```{r}
+print(dim(pre_unpaired_prepostlong))
+print(dim(pre_paired_prepostlong))
+print(length(unique(pre_paired_prepostlong$id_person)))
+```
+
+```{r}
+print(dim(post_unpaired_prepostlong))
+print(dim(post_paired_prepostlong))
+print(length(unique(post_paired_prepostlong$id_person)))
+```
+
+```{r}
+print(dim(long_unpaired_prepostlong))
+print(dim(long_paired_prepostlong))
+print(length(unique(long_paired_prepostlong$id_person)))
+```
+
+## Individual Likert Scale Responses: pre/post/long
+
+```{r}
+pre_paired_summary <- get_survey_type("pre", "summary", pre_paired_prepostlong)
+post_paired_summary <- get_survey_type("post", "summary", post_paired_prepostlong)
+long_paired_summary <- get_survey_type("long", "summary", long_paired_prepostlong)
+
+pre_post_long_paired_summary <- dplyr::bind_rows(pre_paired_summary, post_paired_summary, long_paired_summary)
+```
+
+```{r}
+gsum <- ggplot(pre_post_long_paired_summary,
+       aes(x = text,
+           y = scale_value,
+           fill = survey)) +
+  geom_boxplot() +
+  scale_y_continuous(
+    limits = c(1, NA),
+    breaks = c(1, 4, 7)
+  ) +
+  scale_fill_discrete(
+    name = "Survey",
+    breaks = c("pre", "post", "long"),
+    labels = c("Pre-workshop", "Post-workshop", "Long-term")
+  ) +
+  labs(
+    title = "Summary Likert Responses",
+    subtitle = "Paired across all 3 surveys",
+    x = "Summary Question",
+    y = "Response"
+  ) +
+  theme_minimal() +
+  theme_edt_subfig() +
+  theme() +
+  coord_flip()
+
+print(gsum)
+```
+
+```{r}
+pre_paired_lo <- get_survey_type("pre", "lo", pre_paired_prepostlong)
+post_paired_lo <- get_survey_type("post", "lo", post_paired_prepostlong)
+long_paired_lo <- get_survey_type("long", "lo", long_paired_prepostlong)
+
+pre_post_long_paired_lo <- dplyr::bind_rows(pre_paired_lo, post_paired_lo, long_paired_lo)
+```
+
+```{r}
+glo <- ggplot(pre_post_long_paired_lo,
+       aes(x = text,
+           y = scale_value,
+           fill = survey)) +
+  geom_boxplot() +
+  scale_y_continuous(
+    limits = c(1, NA),
+    breaks = c(1, 4, 7)
+  ) +
+  scale_fill_discrete(
+    name = "Survey",
+    breaks = c("pre", "post", "long"),
+    labels = c("Pre-workshop", "Post-workshop", "Long-term")
+  ) +
+  labs(
+    title = "Learning Objective Likert Responses",
+    subtitle = "Paired across all 3 surveys",
+    x = "Learning Objective",
+    y = "Response"
+  ) +
+  theme_minimal() +
+  theme_edt_subfig() +
+  theme() +
+  coord_flip()
+
+print(glo)
+```
+
+```{r}
+.GlobalEnv$save_analysis_edt(
+  g = gsum,
+  analysis_pth = here("output/survey/050-logitudinal/pre_post_long_summative_paired.png"),
+  edt_pth = here("../dissertation-edt/figs/030-logitudinal/pre_post_long_summative_paired.png"),
+  width = wdth, height = hght, units = "in", bg = "white"
+)
+
+.GlobalEnv$save_analysis_edt(
+  g = glo,
+  analysis_pth = here("output/survey/050-logitudinal/pre_post_long_lo_paired.png"),
+  edt_pth = here("../dissertation-edt/figs/030-logitudinal/pre_post_long_lo_paired.png"),
+  width = wdth, height = hght, units = "in", bg = "white"
+)
+```
+
+
+## Pre-Post
+
+```{r}
+print(length(pre_post_paired_ids))
+```
+
+```{r}
+# data for comparing just pre/post
+pre_paired_prepost <- pre %>%
+  dplyr::filter(id_person %in% pre_post_paired_ids)
+
+post_paired_prepost <- post %>%
+  dplyr::filter(id_person %in% pre_post_paired_ids)
+```
+
+```{r}
+print(length(unique(pre_paired_prepost$id_person)))
+print(length(unique(post_paired_prepost$id_person)))
+```
+
+
+```{r}
+pre_paired_summary <- get_survey_type("pre", "summary", pre_paired_prepost)
+post_paired_summary <- get_survey_type("post", "summary", post_paired_prepost)
+
+pre_post_paired_summary <- dplyr::bind_rows(pre_paired_summary, post_paired_summary)
+```
+
+```{r}
+print(length(unique(pre_post_paired_summary$id_person)))
+```
+
+```{r}
+gsum <- ggplot(pre_post_paired_summary,
+       aes(x = text,
+           y = scale_value,
+           fill = survey)) +
+  geom_boxplot() +
+  scale_y_continuous(
+    limits = c(1, NA),
+    breaks = c(1, 4, 7)
+  ) +
+  scale_fill_discrete(
+    name = "Survey",
+    breaks = c("pre", "post"),
+    labels = c("Pre-workshop", "Post-workshop")
+  ) +
+  labs(
+    title = "Summary Likert Responses",
+    subtitle = "Paired across all pre and post workshop surveys",
+    x = "Summary Question",
+    y = "Response"
+  ) +
+  theme_minimal() +
+  theme_edt_subfig() +
+  theme() +
+  coord_flip()
+
+print(gsum)
+```
+
+```{r}
+pre_paired_lo <- get_survey_type("pre", "lo", pre_paired_prepost)
+post_paired_lo <- get_survey_type("post", "lo", post_paired_prepost)
+
+pre_post_paired_lo <- dplyr::bind_rows(pre_paired_lo, post_paired_lo)
+```
+
+```{r}
+glo <- ggplot(pre_post_paired_lo,
+       aes(x = text,
+           y = scale_value,
+           fill = survey)) +
+  geom_boxplot() +
+  scale_y_continuous(
+    limits = c(1, NA),
+    breaks = c(1, 4, 7)
+  ) +
+  scale_fill_discrete(
+    name = "Survey",
+    breaks = c("pre", "post", "long"),
+    labels = c("Pre-workshop", "Post-workshop", "Long-term")
+  ) +
+  labs(
+    title = "Learning Objective Likert Responses",
+    subtitle = "Paired across all pre and post workshop surveys",
+    x = "Learning Objective",
+    y = "Response"
+  ) +
+  theme_minimal() +
+  theme_edt_subfig() +
+  theme() +
+  coord_flip()
+
+print(glo)
+```
+
+```{r}
+pre_post_long_composite_summary <- pre_post_long_summary %>%
+  dplyr::group_by(survey, id_person) %>%
+  dplyr::summarise(composite_sum = sum(scale_value))
+```
