@@ -16,8 +16,11 @@ library(progress)
 library(flextable)
 library(xtable)
 library(corrplot)
+library(nFactors)
 
 knitr::opts_chunk$set(echo = TRUE)
+
+fs::dir_create(here::here("../dissertation-edt/figs/010-validation/"))
 ```
 
 ```{r}
@@ -132,20 +135,54 @@ dat_corr_p_sig <- dplyr::inner_join(dat_corr,
 dat_corr_p_sig %>%
   dplyr::count(sig) # should get same results as table(sig_p)
 
+
+```
+
+```{r}
+get_corrplor <- function(dat_corr, dat_corr_p, colors) {
+  corrplot(dat_corr,
+           method="color",
+           col=colors(200),  
+           type="full",
+           order="hclust", 
+           hclust.method = "ward.D2",
+           addCoef.col = "black", # Add coefficient of correlation
+           
+           tl.col="black",
+           tl.srt=45, #Text label color and rotation
+           
+           number.cex = 0.80, # text size of corr in corr matrix
+           
+           # Combine with significance
+           p.mat = sim_data_corr_p,
+           sig.level = 0.05,
+           insig = "blank", 
+           
+           # hide correlation coefficient on the principal diagonal
+           diag=TRUE 
+  )
+}
+```
+
+```{r}
 # Visualize the correlation matrix
 # from http://www.sthda.com/english/wiki/visualize-correlation-matrix-using-correlogram
 col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
-corrplot(data_corr, method="color", col=col(200),  
-         type="full", order="hclust", 
-         addCoef.col = "black", # Add coefficient of correlation
-         tl.col="black", tl.srt=45, #Text label color and rotation
-         # Combine with significance
-         p.mat = sim_data_corr_p, sig.level = 0.05, insig = "blank", 
-         # hide correlation coefficient on the principal diagonal
-         diag=TRUE 
-         )
 
+get_corrplor(data_corr, sim_data_corr_p, col)
 ```
+
+```{r}
+png(here::here("./output/persona/efa_item_correlations.png"), width = 800, height = 800)
+get_corrplor(data_corr, sim_data_corr_p, col)
+dev.off()
+
+
+png(here::here("../dissertation-edt/figs/010-validation/efa_item_correlations.png"), width = 800, height = 800)
+get_corrplor(data_corr, sim_data_corr_p, col)
+dev.off()
+```
+
 
 "bad" questions
 
@@ -160,12 +197,17 @@ dat_corr_p_sig <- dat_corr_p_sig %>%
   )
 
 good_questions <- dat_corr_p_sig %>%
-  dplyr::filter(prop > 0.3) %>%
+  dplyr::filter(prop > 0.2) %>%
   dplyr::pull(row)
 
 print(length(good_questions))
 good_questions
 ```
+
+```{r}
+print(length(good_questions))
+```
+
 
 ```{r}
 scaled_good <- numeric %>%
@@ -180,15 +222,23 @@ scaled_good <- numeric %>%
 Taken from: https://www.statmethods.net/advstats/factor.html
 
 ```{r}
+get_scree_values <- function(scaled_dat) {
+  ev <- eigen(cor(scaled_dat)) # get eigenvalues
+  ap <- parallel(subject = nrow(scaled_dat),
+                 var=ncol(scaled_dat),
+                 rep=100,
+                 cent=.05)
+  nS <- nFactors::nScree(x=ev$values,
+                         aparallel=ap$eigen$qevpea)
+  return(nS)
+}
+```
+
+
+```{r}
 # Determine Number of Factors to Extract
-library(nFactors)
-ev <- eigen(cor(scaled)) # get eigenvalues
-ap <- parallel(subject = nrow(scaled),
-               var=ncol(scaled),
-               rep=100,
-               cent=.05)
-nS <- nScree(x=ev$values,
-             aparallel=ap$eigen$qevpea)
+
+nS <- get_scree_values(scaled)
 
 if (interactive()) {
   plotnScree(nS)
@@ -204,6 +254,26 @@ if (interactive()) {
 }
 
 ```
+
+```{r}
+# scree plot for just the good variables
+
+ns_good <- get_scree_values(scaled_good)
+
+if (interactive()) {
+  plotnScree(ns_good)
+} else {
+  png(here::here("./output/persona/efa_eigen_scree_good.png"))
+  plotnScree(ns_good)
+  dev.off()
+  
+  fs::dir_create(here::here("../dissertation-edt/figs/010-validation/"))
+  png(here::here("../dissertation-edt/figs/010-validation/efa_eigen_scree_good.png"))
+  plotnScree(ns_good)
+  dev.off()
+}
+```
+
 
 
 ## Loadings
@@ -224,7 +294,7 @@ my_efa <- function(scaled_dat, nfactors, rotation, factor_method) {
 ```
 
 ```{r}
-nfactors_try <- 1:5
+nfactors_try <- 2:4
 rotation_try <- c("none", "varimax", "quartimax", "bentlerT", "equamax", "varimin", "geominT", "bifactor", # orthogonal
                   "Promax", "promax", "oblimin", "simplimax", "bentlerQ", "geominQ", "biquartimin", "cluster" # oblique
                   )
@@ -273,7 +343,7 @@ good_res_combos %>%
 ```
 
 ```{r}
-fa_cutoff <- 0.30
+fa_cutoff <- 0.50
 ```
 
 #### Good vars
@@ -285,19 +355,50 @@ all_param_res_good <- purrr::pmap(l_params,
                                   }
 )
 
-t <- all_param_res_good %>%
+t_good <- all_param_res_good %>%
   purrr::transpose() %>%
   purrr::simplify_all()
 
-all_res_df <- t$result %>%
+all_res_good_df <- t_good$result %>%
   dplyr::bind_rows()
 
-good_res_combos <- all_res_df %>%
+good_res_combos <- all_res_good_df %>%
   dplyr::filter(tli >= 0.9, rmsea < 0.08)
 
 good_res_combos %>%
   dplyr::count(nfactors)
 ```
+
+```{r}
+fac3_mods_good <- all_res_good_df %>%
+  dplyr::filter(rotation == "varimax", nfactors == 3) %>%
+  arrange(bic)
+fac3_mods_good
+```
+
+```{r}
+fac3_mods_good %>%
+  xtable::xtable()
+```
+
+
+```{r}
+good_combos <- all_res_good_df %>%
+  dplyr::filter(tli >= 0.9,
+                rmsea < 0.08,
+                rotation == "varimax"
+                ) %>%
+  dplyr::arrange(bic)
+
+good_combos
+```
+
+```{r}
+xtable::xtable(good_combos)
+```
+
+
+
 
 ### Item distributions
 
@@ -354,9 +455,6 @@ xtable::xtable(fa_table(f2, fa_cutoff))
 
 
 
-
-
-
 ### 3 Loadings
 
 
@@ -387,7 +485,7 @@ xtable::xtable(fa_table(f3, fa_cutoff))
 #### Good
 
 ```{r}
-f3_good <- fa(scaled_good, 3, rotate="varimax", scores="tenBerge", fm = "minchi")
+f3_good <- fa(scaled_good, 3, rotate="varimax", scores="tenBerge", fm = "pa")
 print(f3_good)
 factor.stats(scaled_good, f3_good, n.obs = nrow(scaled_good))
 ```
@@ -395,6 +493,11 @@ factor.stats(scaled_good, f3_good, n.obs = nrow(scaled_good))
 ```{r}
 psych::fa.diagram(f3_good)
 ```
+
+```{r}
+fa_table(f3_good, fa_cutoff)
+```
+
 
 ```{r}
 xtable::xtable(fa_table(f3_good, fa_cutoff))
@@ -417,6 +520,26 @@ f4$loadings
 xtable::xtable(fa_table(f4, fa_cutoff))
 ```
 
+#### Good
+
+```{r}
+f4_good <- fa(scaled_good, 4, rotate="varimax", scores="tenBerge", fm = "ml")
+print(f4_good)
+factor.stats(scaled_good, f4_good, n.obs = nrow(scaled))
+```
+
+```{r}
+psych::fa.diagram(f4_good)
+```
+
+```{r}
+fa_table(f4_good, fa_cutoff)
+```
+
+
+```{r}
+xtable::xtable(fa_table(f4_good, fa_cutoff))
+```
 
 
 ### 5 Loadings

@@ -83,6 +83,9 @@ survey_dfs_deidentified <- purrr::map(survey_dfs,
 dups <- purrr::map(survey_dfs_deidentified, ~ janitor::get_dupes(., id_person))
 dups
 
+# persona dups:
+dups[[1]] %>% dplyr::pull(id_person) %>% unique() %>% length()
+
 ## Drop duplicate responses by up filling (backfill) their responses
 
 survey_dfs_deidentified_dedup <- purrr::map(survey_dfs_deidentified, remove_duplicate_ids)

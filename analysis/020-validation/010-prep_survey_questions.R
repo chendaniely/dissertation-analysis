@@ -51,6 +51,8 @@ wide_survey_only <- persona_wide(persona_q_a, qnum = 3:6)
 wide_survey_likert <- persona_wide(persona_q_a, qnum = 3:7)
 wide_likert_only <- persona_wide(persona_q_a, qnum = 7)
 
+dim(wide_survey_likert)
+
 readr::write_csv(wide_survey_only, here::here("./data/final/persona/01-participant_numeric-wide_survey_only.csv"))
 readr::write_csv(wide_likert_only, here::here("./data/final/persona/01-participant_numeric-wide_likert_only.csv"))
 readr::write_csv(wide_survey_likert, here::here("./data/final/persona/01-participant_numeric-wide_survey_likert.csv"))
