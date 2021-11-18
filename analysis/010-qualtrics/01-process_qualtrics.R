@@ -28,8 +28,10 @@ readRenviron("~/.Renviron")
 ## Get qualtrics surveys -----
 surveys <- all_surveys()
 survey_ids <- purrr::map_chr(.GlobalEnv$survey_names, ~ surveys$id[stringr::str_detect(surveys$name, .)])
+survey_ids_exercise <- purrr::map_chr(.GlobalEnv$survey_names_exercise, ~ surveys$id[stringr::str_detect(surveys$name, .)])
 
-survey_info <- data.frame(name = .GlobalEnv$survey_names, qualtrics_id = survey_ids)
+survey_info <- data.frame(name = c(.GlobalEnv$survey_names, .GlobalEnv$survey_names_exercise),
+                          qualtrics_id = c(survey_ids, survey_ids_exercise))
 survey_info
 
 survey_dfs <- purrr::map(survey_ids,
@@ -39,6 +41,16 @@ survey_dfs <- purrr::map(survey_ids,
                            .GlobalEnv$remove_invalid_rows() %>%
                            dplyr::mutate(id_response = 1:nrow(.)) %>% ## add an identifier for each response
                            dplyr::select(id_response, everything())
+)
+
+survey_dfs_exercise <- purrr::map(survey_ids_exercise,
+                                  ~ qualtRics::fetch_survey(surveyID = .,
+                                                            verbose = FALSE) %>%
+                                    .GlobalEnv$remove_identifiers(type = "p4") %>%
+                                    .GlobalEnv$remove_invalid_rows(type = "p4") %>%
+                                    dplyr::mutate(id_response = 1:nrow(.)) %>% ## add an identifier for each response
+                                    dplyr::select(id_response, everything()) %>%
+                                    {.}
 )
 
 # confirm Q2.2 is the ID column
