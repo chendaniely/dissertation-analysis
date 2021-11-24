@@ -1,0 +1,81 @@
+---
+title: "Workshop Randomizations"
+author: "Daniel Chen"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(readr)
+library(here)
+library(dplyr)
+library(ggplot2)
+library(readxl)
+library(VennDiagram)
+
+randomizations <- readr::read_tsv("data/final/exercises/workshop_arm_randomizations.tsv")
+```
+
+# Signins
+
+```{r}
+signins <- readxl::read_excel(here::here("data", "original", "exercises",
+                                         "020-qualtrics",
+                                         "010-signin.xlsx"))
+```
+
+Number of people signed in
+
+```{r}
+signins %>%
+  nrow()
+```
+
+```{r}
+total_by_date <- signins %>%
+  group_by(lubridate::date(start_date)) %>%
+  summarise(n = n())
+total_by_date
+```
+
+```{r}
+num_dups <- duplicated(signins$q2_2) %>%
+  sum()
+```
+
+
+```{r}
+venn <- VennDiagram::draw.pairwise.venn(
+  area1 = total_by_date[1, "n"],
+  area2 = total_by_date[2, "n"],
+  cross.area = num_dups
+)
+
+grid.draw(venn);
+grid.newpage();
+```
+
+# Duplicate participants
+
+```{r}
+# people who took the workshop mutiple times
+
+dups <- duplicated(randomizations$your_id)
+
+sum(dups)
+```
+
+```{r}
+randomizations %>%
+  dplyr::filter(your_id %in% randomizations$your_id[dups])
+
+```
+
+# Randomizations
+
+```{r}
+randomizations %>%
+  dplyr::count(treatment)
+```

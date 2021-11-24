@@ -1,0 +1,22 @@
+﻿pre,post,long,type,text
+Q5.2_1,Q4.1_1,Q4.1_1,summary,Original data
+Q5.2_2,Q4.1_2,Q4.1_2,summary,Write program
+Q5.2_3,Q4.1_3,Q4.1_3,summary,Search help
+Q5.2_4,Q4.1_4,Q4.1_4,summary,Overcome problem
+Q5.2_5,Q4.1_5,Q4.1_5,summary,Confident programming
+Q5.2_6,Q4.1_6,Q4.1_6,summary,R/Python reproduce
+Q5.2_7,Q4.1_7,Q4.1_7,summary,R/Python efficient
+Q5.3_1,Q4.2_1,Q4.2_1,lo,Name tidy
+Q5.3_2,Q4.2_2,Q4.2_2,lo,Transform data
+Q5.3_3,Q4.2_3,Q4.2_3,lo,Identify spreadsheets
+Q5.3_4,Q4.2_4,Q4.2_4,lo,Assess spreadsheets
+Q5.3_5,Q4.2_5,Q4.2_5,lo,Break down steps
+Q5.3_6,Q4.2_6,Q4.2_6,lo,Construct plot
+Q5.3_7,Q4.2_7,Q4.2_7,lo,Build pipeline
+Q5.3_8,Q4.2_8,Q4.2_8,lo,Calculate analysis
+,Q5.1_1,Q5.1_1,summative,Load 
+,Q5.1_2,Q5.1_2,summative,Filter 
+,Q5.1_3,Q5.1_3,summative,Save
+,Q5.1_4,Q5.1_4,summative,Tidy
+,Q5.1_5,Q5.1_5,summative,Plot 
+,Q5.1_6,Q5.1_6,summative,Model

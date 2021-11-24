@@ -8,6 +8,7 @@ library(glue)
 library(lubridate)
 library(stringr)
 library(janitor)
+library(lubridate)
 
 source(here("./R/remove_identifiers.R"))
 source(here("./R/remove_invalid_rows.R"))
@@ -41,16 +42,6 @@ survey_dfs <- purrr::map(survey_ids,
                            .GlobalEnv$remove_invalid_rows() %>%
                            dplyr::mutate(id_response = 1:nrow(.)) %>% ## add an identifier for each response
                            dplyr::select(id_response, everything())
-)
-
-survey_dfs_exercise <- purrr::map(survey_ids_exercise,
-                                  ~ qualtRics::fetch_survey(surveyID = .,
-                                                            verbose = FALSE) %>%
-                                    .GlobalEnv$remove_identifiers(type = "p4") %>%
-                                    .GlobalEnv$remove_invalid_rows(type = "p4") %>%
-                                    dplyr::mutate(id_response = 1:nrow(.)) %>% ## add an identifier for each response
-                                    dplyr::select(id_response, everything()) %>%
-                                    {.}
 )
 
 # confirm Q2.2 is the ID column

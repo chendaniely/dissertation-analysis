@@ -7,14 +7,13 @@ rather get the link from the survey/site
 
 Grading: 1 point for code that works (minus bracket syntax), or uses the correct functions even if params are not exactly what I expected. for each of the 5 parts
 
-3kusou: 0
-1bunor: 5
-0hacar: 3
-2tacaz: 2
-7vjx: 5
-4nimad: 0
-2micar: 5
-
+- library
+- read_excel
+- select
+- filter
+- group_by
+- summarize
+- write_csv
 ## Ex1
 
 Rubric:
@@ -37,16 +36,6 @@ Notes:
 
 ### Arm 2
 6chhom: 0, see 1
-0hacum: 4
-7vjx: 5
-
-### Arm 3
-
-### Arm 4
-
-0garbc: 0
-2micar: 4
-0garbc: 4
 
 ## Ex 2
 
@@ -79,7 +68,7 @@ Notes
 
 4nimad: NA, see 1
 2micar: 5
-0garbc: 5
+0garbc: 5, see 2
 
 ## Ex 3
 
@@ -109,6 +98,8 @@ Notes
 - 1 point save file
 - 1 point tidy (pivot_longer)
 - 1 point for groupby
+- 1 point for summarize
+- 1 mean (na.rm = TRUE) or used dropna
 
 1bunor: 5
 4nimad: 3
