@@ -5,6 +5,7 @@ library(purrr)
 library(lubridate)
 library(stringr)
 library(writexl)
+library(dplyr)
 
 treatment_arms <- readr::read_tsv(here::here("data/final/exercises/workshop_arm_randomizations.tsv"))
 
@@ -14,7 +15,7 @@ dup <- treatment_arms$your_id[duplicated(treatment_arms$your_id)]
 stopifnot(length(dup) == 1) 
 stopifnot(nrow(treatment_arms) == 30)
 treatment_arms <- treatment_arms %>%
-  filter(!(block_size == 10 & your_id == dup))
+  dplyr::filter(!(block_size == 10 & your_id == dup))
 stopifnot(nrow(treatment_arms) == 29)
 
 stopifnot(!any(duplicated(treatment_arms$your_id )))
@@ -89,11 +90,22 @@ dat_all <- exercise_dat_arms %>%
     is_group_match = (as.integer(arm) / 10) == readr::parse_number(treatment)
   ) %>%
   dplyr::filter(is_group_match %in% c(TRUE, NA)) %>%
-  dplyr::arrange(part, ex, treatment)
+  dplyr::arrange(part, ex) %>%
+  dplyr::mutate(
+    ex = dplyr::case_when(
+      ex == "workshop" ~ "pre",
+      is.na(ex) ~ "sum",
+      TRUE ~ ex
+    ),
+    id = dplyr::row_number()
+  ) %>%
+  dplyr::select(id, everything())
 
+
+# only keep columns needed to grade code
 dat_grade <- dat_all %>%
-  dplyr::select(fn, part, arm, ex, block_identifier, block_size, sequence_within_block, treatment, duration_s, q1, q2) %>%
-  dplyr::arrange(part, ex, treatment)
+  dplyr::select(id, part, ex, q1, q2) %>%
+  dplyr::arrange(part, ex)
 
 
 writexl::write_xlsx(dat_all, here::here("data/final/exercises/exercise_data_all.xlsx"))

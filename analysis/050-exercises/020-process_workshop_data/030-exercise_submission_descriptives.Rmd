@@ -14,33 +14,56 @@ library(dplyr)
 library(ggplot2)
 library(readxl)
 
-exercises <- readxl::read_xlsx(here::here("./data/final/exercises/exercise_data_all.xlsx"))
+source(here::here("R/save_analysis_edt.R"))
 
-exercises <- exercises %>%
+exercises <- readxl::read_xlsx(here::here("./data/final/exercises/exercise_data_all_clean.xlsx")) %>%
+  mutate(score = as.integer(score),
+         ex = dplyr::case_when(
+           ex == "010" ~ "ex1",
+           ex == "020" ~ "ex2",
+           ex == "030" ~ "ex3",
+           TRUE ~ ex
+         )
+  ) %>%
   dplyr::mutate(
-    ex = dplyr::case_when(
-      ex == "workshop" ~ "pre",
-      is.na(ex) ~ "sum",
-      TRUE ~ ex
+    gp_13_24 = dplyr::case_when(
+      treatment %in% c("Group 1", "Group 3") ~ "Groups 1+3",
+      treatment %in% c("Group 2", "Group 4") ~ "Groups 2+4",
+      TRUE ~ NA_character_
     )
   )
+
+rubric <- readxl::read_xlsx(here::here("./data/original/exercises/rubric.xlsx"))
+
+exercises <- dplyr::left_join(exercises, rubric, by = c("ex" = "exercise"))
+
+exercises_sub <- exercises %>%
+  dplyr::select(id, start_date, duration_s, q1, part, arm, ex, treatment, gp_13_24, score, total) %>%
+  tidyr::drop_na() %>%
+  dplyr::mutate(
+    score_prop = score / total,
+    is_score_100 = score_prop == 1
+  )
+
+
+
 ```
 
 
 ```{r}
-ggplot(exercises, aes(x = treatment)) +
+ggplot(exercises_sub, aes(x = treatment)) +
   geom_bar()
 ```
 
 ```{r}
-ggplot(exercises, aes(x = ex, fill = treatment)) +
+ggplot(exercises_sub, aes(x = ex, fill = treatment)) +
   geom_bar(position = "dodge")
 ```
 
 
 
 ```{r}
-ggplot(exercises, aes(x = ex, y = duration_s, fill = treatment)) +
+ggplot(exercises_sub, aes(x = ex, y = duration_s, fill = treatment)) +
   geom_boxplot() +
   theme_minimal()
 ```
@@ -49,18 +72,283 @@ ggplot(exercises, aes(x = ex, y = duration_s, fill = treatment)) +
 ```{r}
 # assume the auto grader wasn't used, just compare blank with faded
 
-exercises <- exercises %>%
-  dplyr::mutate(
-    gp_13_24 = dplyr::case_when(
-      treatment %in% c("Group 1", "Group 3") ~ "Groups 1+3",
-      treatment %in% c("Group 2", "Group 4") ~ "Groups 2+4",
-      TRUE ~ NA_character_
-    )
-  )
+ggplot(exercises_sub, aes(x = ex, y = duration_s, fill = gp_13_24)) +
+  geom_boxplot() +
+  theme_minimal()
+```
+
+# Looking at Scores
+
+```{r}
+exercises_sub %>%
+  dplyr::filter(ex %in% c("pre", "sum")) %>%
+  ggplot(aes(x = treatment, y = score, fill = ex)) +
+  geom_boxplot()
+```
+
+# pre analysis
+
+If you do well in the pre, how well do you do in the rest?
+
+The sum depends on the pre, so i should only look at peopel who do well in pre.
+
+```{r}
+ggplot(exercises_sub, aes(x = ex, y = score)) +
+  geom_violin() +
+  geom_jitter() +
+  facet_wrap(~ ex)
+
 ```
 
 ```{r}
-ggplot(exercises, aes(x = ex, y = duration_s, fill = gp_13_24)) +
+good_pre_ids <- exercises_sub %>%
+  dplyr::filter(ex == "pre", score == 7) %>%
+  dplyr::pull(q1)
+```
+
+```{r}
+exercises_sub <- exercises_sub %>%
+  dplyr::mutate(
+    pre_100 = q1 %in% good_pre_ids
+  )
+```
+
+
+```{r}
+good_pre <- exercises_sub %>%
+  dplyr::filter(q1 %in% good_pre_ids)
+```
+
+
+```{r}
+ggplot(good_pre, aes(x = ex, y = score_prop, fill = treatment)) +
+  geom_boxplot()
+```
+
+```{r}
+good_pre %>%
+  count(ex, treatment, score)
+```
+
+look at the rest who did not get full score in pre
+
+```{r}
+fs::dir_create(here::here("output/exercises"))
+fs::dir_create(here::here("../", "dissertation-edt", "figs", "040-exercises"))
+```
+
+
+```{r}
+
+pre_100_labs <- c("Pre: Full Score", "Pre: Not Full Score")
+names(pre_100_labs) <- c(TRUE, FALSE)
+
+g <- ggplot(exercises_sub, aes(x = ex, y = score_prop, fill = treatment)) +
   geom_boxplot() +
-  theme_minimal()
+  scale_fill_discrete(name = "Treatment") +
+  # scale_fill_discrete(name = "Treatment",
+  #                     breaks = c("Group 1", "Group 2", "Group 3", "Group 4"),
+  #                     labels = c("Grp 1: blank + no autograder",
+  #                                "Grp 2: faded + no autograder",
+  #                                "Grp 3: blank + w/ autograder",
+  #                                "Grp 4: faded + w/ autograder")) +
+  labs(title = "Graded Scores (%) By Exercise Question and Treatment Group",
+       x = "Exercise Question",
+       y = "Graded Score (%)") +
+  facet_wrap(~pre_100,
+             labeller = labeller(pre_100 = pre_100_labs)) +
+  theme_minimal() +
+  theme(plot.title.position = "plot")
+g
+
+.GlobalEnv$save_analysis_edt(
+  g,
+  analysis_pth = here("./output", "exercises", "score_prop-ex-treatment-facet_pre.png"),
+  edt_pth = here("../", "dissertation-edt", "figs", "040-exercises", "score_prop-ex-treatment-facet_pre.png"),
+  width = 8,
+  height = 5,
+  units = "in",
+  bg = "white"
+  )
+```
+
+
+```{r}
+g <- ggplot(exercises_sub, aes(x = ex, y = score_prop, fill = treatment)) +
+  geom_boxplot() +
+  scale_fill_discrete(name = "Treatment") +
+  labs(title = "Graded Scores (%) By Exercise Question and Treatment Group",
+       x = "Exercise Question",
+       y = "Graded Score (%)") +
+  theme_minimal() +
+  theme(plot.title.position = "plot")
+g
+
+.GlobalEnv$save_analysis_edt(
+  g,
+  analysis_pth = here("./output", "exercises", "score_prop-ex-treatment-no_facet.png"),
+  edt_pth = here("../", "dissertation-edt", "figs", "040-exercises", "score_prop-ex-treatment-no_facet.png.png"),
+  width = 8,
+  height = 5,
+  units = "in",
+  bg = "white"
+  )
+```
+
+## Combine groups
+
+facet
+
+```{r}
+# combine groups
+g <- ggplot(exercises_sub, aes(x = ex, y = score_prop, fill = gp_13_24)) +
+  geom_boxplot() +
+  scale_fill_discrete(name = "Treatment") +
+  labs(title = "Graded Scores (%) By Exercise Question and Treatment Group",
+       x = "Exercise Question",
+       y = "Graded Score (%)") +
+  facet_wrap(~pre_100,
+             labeller = labeller(pre_100 = pre_100_labs)) +
+  theme_minimal() +
+  theme(plot.title.position = "plot")
+g
+
+.GlobalEnv$save_analysis_edt(
+  g,
+  analysis_pth = here("./output", "exercises", "score_prop-ex-treatment-facet_pre-combine_treatments.png"),
+  edt_pth = here("../", "dissertation-edt", "figs", "040-exercises", "score_prop-ex-treatment-facet_pre-combine_treatments.png"),
+  width = 8,
+  height = 5,
+  units = "in",
+  bg = "white"
+  )
+```
+
+no facet
+
+```{r}
+g <- ggplot(exercises_sub, aes(x = ex, y = score_prop, fill = gp_13_24)) +
+  geom_boxplot() +
+  scale_fill_discrete(name = "Treatment") +
+  labs(title = "Graded Scores (%) By Exercise Question and Treatment Group",
+       x = "Exercise Question",
+       y = "Graded Score (%)") +
+  theme_minimal() +
+  theme(plot.title.position = "plot")
+g
+
+.GlobalEnv$save_analysis_edt(
+  g,
+  analysis_pth = here("./output", "exercises", "score_prop-ex-treatment-no_facet-combine_treatments.png"),
+  edt_pth = here("../", "dissertation-edt", "figs", "040-exercises", "score_prop-ex-treatment-no_facet-combine_treatments.png"),
+  width = 8,
+  height = 5,
+  units = "in",
+  bg = "white"
+  )
+```
+
+
+
+
+
+
+## time to complete exercises
+
+
+```{r}
+g <- ggplot(exercises_sub, aes(x = ex, y = duration_s, fill = treatment)) +
+  geom_boxplot() +
+  scale_fill_discrete(name = "Treatment") +
+  # scale_fill_discrete(name = "Treatment",
+  #                     breaks = c("Group 1", "Group 2", "Group 3", "Group 4"),
+  #                     labels = c("Grp 1: blank + no autograder",
+  #                                "Grp 2: faded + no autograder",
+  #                                "Grp 3: blank + w/ autograder",
+  #                                "Grp 4: faded + w/ autograder")) +
+  # labs(title = "Graded Scores (%) By Exercise Question and Treatment Group",
+  #      x = "Exercise Question",
+  #      y = "Graded Score (%)") +
+  facet_wrap(~pre_100,
+             labeller = labeller(pre_100 = pre_100_labs)) +
+  theme_minimal() +
+  theme(plot.title.position = "plot")
+g
+```
+
+```{r}
+g <- ggplot(exercises_sub, aes(x = ex, y = duration_s, fill = treatment)) +
+  geom_boxplot() +
+  scale_fill_discrete(name = "Treatment") +
+  # scale_fill_discrete(name = "Treatment",
+  #                     breaks = c("Group 1", "Group 2", "Group 3", "Group 4"),
+  #                     labels = c("Grp 1: blank + no autograder",
+  #                                "Grp 2: faded + no autograder",
+  #                                "Grp 3: blank + w/ autograder",
+  #                                "Grp 4: faded + w/ autograder")) +
+  # labs(title = "Graded Scores (%) By Exercise Question and Treatment Group",
+  #      x = "Exercise Question",
+  #      y = "Graded Score (%)") +
+  # facet_wrap(~pre_100,
+  #            labeller = labeller(pre_100 = pre_100_labs)) +
+  theme_minimal() +
+  theme(plot.title.position = "plot")
+g
+```
+
+Combined groups
+
+Facet
+
+```{r}
+g <- ggplot(exercises_sub, aes(x = ex, y = duration_s, fill = gp_13_24)) +
+  geom_boxplot() +
+  scale_fill_discrete(name = "Treatment") +
+  # scale_fill_discrete(name = "Treatment",
+  #                     breaks = c("Group 1", "Group 2", "Group 3", "Group 4"),
+  #                     labels = c("Grp 1: blank + no autograder",
+  #                                "Grp 2: faded + no autograder",
+  #                                "Grp 3: blank + w/ autograder",
+  #                                "Grp 4: faded + w/ autograder")) +
+  # labs(title = "Graded Scores (%) By Exercise Question and Treatment Group",
+  #      x = "Exercise Question",
+  #      y = "Graded Score (%)") +
+  facet_wrap(~pre_100,
+             labeller = labeller(pre_100 = pre_100_labs)) +
+  theme_minimal() +
+  theme(plot.title.position = "plot")
+g
+```
+
+No facet
+
+```{r}
+g <- ggplot(exercises_sub, aes(x = ex, y = duration_s / 60, fill = gp_13_24)) +
+  geom_boxplot() +
+  scale_fill_discrete(name = "Treatment") +
+  # scale_fill_discrete(name = "Treatment",
+  #                     breaks = c("Group 1", "Group 2", "Group 3", "Group 4"),
+  #                     labels = c("Grp 1: blank + no autograder",
+  #                                "Grp 2: faded + no autograder",
+  #                                "Grp 3: blank + w/ autograder",
+  #                                "Grp 4: faded + w/ autograder")) +
+  scale_y_continuous(limits = c(0, 25), breaks = seq(0, 25, by = 5)) +
+  labs(title = "Time to Complete Exercise By Exercise Question and Treatment Group",
+       x = "Exercise Question",
+       y = "Time to Complete (min)") +
+  # facet_wrap(~pre_100,
+  #            labeller = labeller(pre_100 = pre_100_labs)) +
+  theme_minimal() +
+  theme(plot.title.position = "plot")
+g
+
+.GlobalEnv$save_analysis_edt(
+  g,
+  analysis_pth = here("./output", "exercises", "time_to_complete-ex-treatment-no_facet-combine_treatments.png"),
+  edt_pth = here("../", "dissertation-edt", "figs", "040-exercises", "time_to_complete-ex-treatment-no_facet-combine_treatments.png"),
+  width = 8,
+  height = 5,
+  units = "in",
+  bg = "white"
+  )
 ```
