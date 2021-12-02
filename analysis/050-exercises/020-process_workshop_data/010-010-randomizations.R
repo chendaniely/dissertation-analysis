@@ -58,4 +58,9 @@ arms <- dplyr::bind_rows(d1, d2)
 
 arms
 
+length(unique(arms$your_id)) # 29
+
+arms %>%
+  dplyr::count(treatment)
+
 readr::write_tsv(arms, here::here("data/final/exercises/workshop_arm_randomizations.tsv"))

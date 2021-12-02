@@ -96,7 +96,7 @@ num_consented_df <- num_consented_df %>%
 
 stopifnot(any(duplicated(num_consented_df$id_person)) == FALSE)
 
-table(num_consented$qualify)
+table(num_consented_df$qualify)
 
 num_consented <- length(num_consented_df$id_person)
 ```
