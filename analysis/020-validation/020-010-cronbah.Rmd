@@ -67,33 +67,33 @@ wide_survey_likert %>%
 
 ## Results from 3-factor EFA model
 
-I only added Questions with a loading >= 0.60
+I only added Questions with a loading >= 0.60 (2021-12-09: no added all of them)
 
 ```{r}
-ml1 <- wide_survey_likert %>%
-  dplyr::select(Q3.4, Q3.3, Q3.5, Q7.2_2, Q3.1, Q7.2_5, Q5.2, Q7.2_4) %>%
+pa1 <- wide_survey_likert %>%
+  dplyr::select(Q3.4, Q3.3, Q3.5, Q7.2_2, Q3.1, Q7.2_5, Q5.2) %>%
   data.matrix() %>%
   psych::alpha()
 
-ml1
+pa1
 ```
 
 ```{r}
-ml2 <- wide_survey_likert %>%
-  dplyr::select(Q6.2, Q6.2, Q6.3) %>%
-  data.matrix() %>%
-  psych::alpha()
-
-ml2
-```
-
-```{r}
-ml3 <- wide_survey_likert %>%
+pa2 <- wide_survey_likert %>%
   dplyr::select(Q7.2_7, Q7.2_6) %>%
   data.matrix() %>%
   psych::alpha()
 
-ml3
+pa2
+```
+
+```{r}
+pa3 <- wide_survey_likert %>%
+  dplyr::select(Q4.2, Q7.2_3) %>%
+  data.matrix() %>%
+  psych::alpha()
+
+pa3
 ```
 
 
