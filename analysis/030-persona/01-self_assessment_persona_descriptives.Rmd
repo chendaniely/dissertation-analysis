@@ -26,6 +26,7 @@ library(knitr)
 library(kableExtra)
 library(viridis)
 library(glue)
+library(forcats)
 
 source(here("./R/plot_question_bar.R"))
 source(here("./R/likert.R"))
@@ -172,7 +173,7 @@ fs::dir_create(here("./output", "survey", "01-self_assessment"), recurse = TRUE)
 
 
 ```{r}
-g <- ggplot(data = occupation, aes(x = occupation_group, y = n)) +
+g <- ggplot(data = occupation, aes(x = forcats::fct_reorder(occupation_group, n), y = n)) +
   geom_bar(stat = "identity") +
   theme_minimal() +
   coord_flip() +
@@ -201,8 +202,17 @@ save_analysis_edt(
 for (q in unique(counts$qbase)) {
   #print(q)
   if (q %in% c("Q7.2", "Q7.3", "Q7.4")) {next} # skip the likert and free-response questions for later
+  
+ 
+  if (q %in% c("Q2.3")) {  # order by count
+    type <- "by_count"
+  } else if (q %in% c()) { # order by likert
+    type <- "by_likert"
+  } else {
+    type = "asis"
+  }
 
-  g <- plot_question_bar(dplyr::filter(counts, qbase == q))
+  g <- plot_question_bar(dplyr::filter(counts, qbase == q), type = type)
   pth <- here("./output", "survey", "01-self_assessment", glue::glue("{q}.png"))
   #print(pth)
   print(g)

@@ -1,24 +1,35 @@
 library(rlang)
+library(forcats)
 
-plot_question_bar <- function(dat, fill_var = NULL) {
+plot_question_bar <- function(dat, fill_var = NULL, type = "asis") {
   if (is.null(fill_var)) {
     ex <- NULL
   } else {
     ex <- rlang::parse_expr(fill_var)
   }
-  
-  g <- ggplot(data = dat,
-         aes(x = stringr::str_wrap(response, 60),
-             y = n)
-  ) 
+  #browser()
+  if (type == "by_count") {
+    g <- ggplot(data = dat,
+                aes(x = fct_reorder(response, n),
+                    y = n)) #+
+      # str_wrap needs to be separate from reorder, else reorder will be undone
+      #scale_x_discrete(labels = stringr::str_wrap(dat$response, 60))
+  } else if (type == "by_likert") {
+    
+  } else {
+    g <- ggplot(data = dat,
+                aes(x = stringr::str_wrap(response, 60),
+                    y = n)) 
+  }
+
   
   if (is.null(ex)) {
     g <- g + geom_bar(stat = "identity",
-                      position="dodge")
+                      position ="dodge")
   } else {
     g <- g + geom_bar(aes(fill = as.factor(!!ex)),
                       stat = "identity",
-                      position="dodge")
+                      position ="dodge")
   }
   
   g <- g +

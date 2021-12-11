@@ -40,7 +40,15 @@ table(signups_valid$Q1.2)
 # vtc.vt.edu -> @vt.edu
 # eservices.virginia.edu accounts seem to be no longer active
 
-signups_valid$Q1.3_3 %>%
+signups_valid <- signups_valid %>%
+  tidyr::separate(Q1.3_3, into = c("email_name", "email_domain"), sep = "@", remove = FALSE) %>%
+  dplyr::mutate(email_domain = dplyr::case_when(
+    email_domain %in% c("vtc.vet.edu", "vtc.vt.edu") ~ "vt.edu",
+    TRUE ~ email_domain
+  )) %>%
+  dplyr::mutate(email_fixed = glue::glue("{email_name}@{email_domain}"))
+
+signups_valid$email_fixed %>%
   unique() %>%
   paste0(collapse = ", ")
 

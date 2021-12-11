@@ -93,8 +93,11 @@ g <- ggplot(occupation_cluster, aes(x = occupation_group,
                                fill = as.factor((!!sym(gp_col))) )) +
   geom_bar(position = "dodge") +
   scale_fill_discrete(name = "Cluster") +
+  xlab("Occupation Group") +
+  ylab("Count") +
   coord_flip() +
-  theme_minimal()
+  theme_minimal(base_size = 15) +
+  theme(text = element_text(family = "Atkinson Hyperlegible"),)
 g
 ```
 
@@ -109,10 +112,11 @@ if (params$num_clusters == 3) {
   save_analysis_edt(
     g = g,
     analysis_pth = pth,
-    edt_pth = here::here(glue::glue("../dissertation-edt/figs/020-persona/{params$survey_data}/group_cluster_occupation_{params$num_clusters}.png"))
+    edt_pth = here::here(glue::glue("../dissertation-edt/figs/020-persona/{params$survey_data}/group_cluster_occupation_{params$num_clusters}.png")),
+    bg = "white"
   )
 } else {
-  ggsave(filename = pth, plot = g, width = 8, height = 5, units = "in")
+  ggsave(filename = pth, plot = g, width = 8, height = 5, units = "in", bg = "white")
 }
 ```
 
@@ -138,6 +142,7 @@ display.brewer.pal(8, "Dark2")
 COLORS <- brewer.pal(8, "Dark2")[c(1:4, 6)]
 ```
 
+## Main plots
 
 ```{r}
 for (q in unique(counts$qbase)) {
@@ -146,15 +151,16 @@ for (q in unique(counts$qbase)) {
   if (q %in% c("Q7.2", "Q7.3", "Q7.4")) {next}
 
   g <- plot_question_bar(dplyr::filter(counts, qbase == q), fill_var = gp_col)
+  print(g)
+  
   pth <- here("./output",
               "persona",
               glue::glue("{params$survey_data}"),
               glue::glue("group_descriptives_{params$num_clusters}"),
               glue::glue("{q}.png"))
   print(pth)
-  print(g)
   
-  if (q %in% c("Q2.3", "Q3.4", "Q6.2")) { # plots used for dissertation
+  if (q %in% c("Q2.3", "Q3.4", "Q4.2")) { # plots used for dissertation
     edt_pth <- here("..",
               "dissertation-edt",
               "figs",
@@ -170,6 +176,82 @@ for (q in unique(counts$qbase)) {
   } else {
     ggsave(filename = pth, plot = g, width = 8, height = 5, units = "in", bg = "white")
   }
+}
+```
+
+## Dissertation plots
+
+```{r}
+# hacky stuff to just get figs for defense
+# Q3.4, Q7.2_7, and Q4.2 had the highest loadings
+#6.2, 4.4, and 3.3 were wave 1 questions
+specific_plots_ordered <- c("Q3.4", "Q4.2", "Q6.2", "Q4.4", "Q3.3")
+
+counts_defense <- counts %>%
+  dplyr::filter(qbase %in% specific_plots_ordered)
+  
+recode_text <- readr::read_tsv(here::here("data/original/surveys_recodes/question_text_recodes.tsv"))
+recode_type <- readr::read_csv(here::here("data/original/surveys_recodes/survey_question_recodes_type.csv")) %>%
+  dplyr::filter(survey == "persona")
+
+recode_text <- recode_type %>%
+  dplyr::left_join(recode_text, by = "scale_type")
+
+title_wrap_len = 60
+question_text_len = title_wrap_len * 2
+
+counts_defense_fixed <- counts_defense %>%
+  dplyr::mutate(response = stringr::str_remove_all(response, "\\."),
+                response = stringr::str_replace_all(response, "’", "'")) %>%
+  dplyr::left_join(recode_text, by = c("qbase" = "question", "response" = "text")) %>%
+  dplyr::mutate(response = stringr::str_wrap(response, 30),
+                question_text = stringr::str_replace_all(question_text, '\"\"\"\"', '"'),
+                question_text = stringr::str_trunc(question_text, width = question_text_len)
+                )
+
+for (q in specific_plots_ordered) {
+  print(q)
+  # q <- specific_plots_ordered[[2]]
+  dat <- dplyr::filter(counts_defense_fixed, qbase == q)
+  g <- dat %>%
+    ggplot(aes(x = forcats::fct_reorder(response, scale_value),
+               y = n,
+               fill = as.factor(group3))) +
+    geom_bar(stat = "identity", position = "dodge") +
+    scale_fill_discrete(name = "Group") +
+    scale_x_discrete() +
+    xlab("") +
+    ylab("Count") +
+    #labels(line_break(dat$response)) +
+    coord_flip() +
+    ggtitle(stringr::str_wrap(dat$question_text, title_wrap_len)) +
+    theme_minimal(base_size = 15) +
+    theme(
+      text = element_text(family = "Atkinson Hyperlegible"),
+      plot.title.position = "plot",
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank()
+    )
+  print(g)
+  
+  pth <- here("./output",
+              "persona",
+              glue::glue("{params$survey_data}"),
+              glue::glue("group_descriptives_{params$num_clusters}"),
+              glue::glue("{q}.png"))
+  
+  edt_pth <- here("..",
+                  "dissertation-edt",
+                  "figs",
+                  "020-persona",
+                  glue::glue("{params$survey_data}"),
+                  glue::glue("{q}-group-{params$num_clusters}.png"))
+  save_analysis_edt(
+    g = g,
+    analysis_pth = pth,
+    edt_pth = edt_pth,
+    width = 8, height = 5, units = "in", bg = "white"
+  )
 }
 ```
 
@@ -200,15 +282,24 @@ ggsave(filename = here("./output",
 ## Separate plots for likert questions
 
 ```{r}
-g <- likert_q_count %>%
+dat <- likert_q_count %>%
   tidyr::drop_na() %>%
   dplyr::filter(text == "Using a programming language (like R or Python) can make my analyses easier to reproduce.") %>%
-  ggplot(aes(x = response, y = n, fill = as.factor(group3))) +
+  dplyr::left_join(recode_text %>%
+                     filter(question == "Q7.2_7"),
+                   by = c("response" = "text"))
+
+g <- dat %>%
+  ggplot(aes(x = forcats::fct_reorder(response, scale_value), y = n, fill = as.factor(group3))) +
   geom_bar(stat = "identity", position = "dodge") +
   coord_flip() +
-  ggtitle(stringr::str_wrap("Using a programming language (like R or Python) can make my analyses easier to reproduce.", 80)) +
-  theme_minimal() +
+  ggtitle(stringr::str_wrap("Using a programming language (like R or Python) can make my analyses easier to reproduce.", 60)) +
+  xlab("") +
+  ylab("count") +
+  scale_fill_discrete("Group") +
+  theme_minimal(base_size = 15) +
   theme(
+    text = element_text(family = "Atkinson Hyperlegible"),
     plot.title.position = "plot"
   )
 
@@ -232,7 +323,7 @@ save_analysis_edt(
   g = g,
   analysis_pth = analysis_pth,
   edt_pth = edt_pth,
-  width = 8, height = 5, units = "in")
+  width = 8, height = 5, units = "in", bg = "white")
   
 ```
 

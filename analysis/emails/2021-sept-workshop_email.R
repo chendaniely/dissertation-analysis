@@ -68,11 +68,12 @@ signup_dat %>%
 
 # r1 emails -----
 
-emails %>%
+emails_r1 <- emails %>%
   select(Q3_1, Q3_2, Q3_3, r1, EndDate) %>%
   filter(stringr::str_detect(r1, "^I will attend")) %>%
   pull(Q3_3) %>%
   unique()
+emails_r1
 
 emails %>%
   get_emails(r1) %>%
@@ -80,11 +81,12 @@ emails %>%
 
 # py emails -----
 
-emails %>%
+emails_py <- emails %>%
   select(Q3_1, Q3_2, Q3_3, py, EndDate) %>%
   filter(stringr::str_detect(py, "^I will attend")) %>%
   pull(Q3_3) %>%
   unique()
+emails_py
 
 emails %>%
   get_emails(py) %>%
@@ -92,12 +94,21 @@ emails %>%
 
 # r2 emails -----
 
-emails %>%
+emails_r2 <- emails %>%
   select(Q3_1, Q3_2, Q3_3, r2, EndDate) %>%
   filter(stringr::str_detect(r2, "^I will attend")) %>%
   pull(Q3_3) %>%
-  unique()
+  unique
+emails_r2
 
 emails %>%
   get_emails(r2) %>%
+  paste0(collapse = ", ")
+
+emails_all <- c(emails_r1, emails_r2, emails_py)
+
+emails_all_unique <- emails_all %>%
+  unique()
+
+emails_all_unique %>%
   paste0(collapse = ", ")
