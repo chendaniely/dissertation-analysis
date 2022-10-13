@@ -33,3 +33,21 @@ wksp_cts %>%
   janitor::adorn_totals() %>%
   xtable::xtable(label = "tab:workshop-counts")
 ```
+
+
+```{r}
+wksp_cts_side <- readr::read_csv(here::here("./data/original/workshop_attendee_counts-wide.csv"), lazy = FALSE)
+```
+
+```{r}
+wksp_cts_side %>%
+  dplyr::mutate(
+    dplyr::across(`Registrants`:last_col(), as.integer)
+  ) %>%
+  janitor::adorn_totals() %>%
+  dplyr::mutate(
+    dplyr::across(starts_with("D"), ~tidyr::replace_na(.x, "-"))
+  ) %>%
+  xtable::xtable(label = "tab:workshop-counts") %>%
+  print(include.rownames  = FALSE)
+```
